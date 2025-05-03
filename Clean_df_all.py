@@ -4,6 +4,8 @@ import pandas_market_calendars as mcal
 df = pd.read_csv(r"data/px_last.csv", index_col=0, parse_dates=True)
 df = df[['SPY US Equity','DIA US Equity', 'QQQ US Equity']]
 
+df = df.pct_change().dropna()
+
 start_date_total_set = "2011-01-03"
 end_date_total_set = "2025-05-03"
 
@@ -52,6 +54,7 @@ start_date_out_sample_set = out_sample_set_start
 end_date_out_sample_set = end_date_total_set
 
 # Création des ensembles de données
+df_in_sample_set = df_total_set.loc[start_date_training_set:end_date_test_set]
 df_training_set = df_total_set.loc[start_date_training_set:end_date_training_set]
 df_test_set = df_total_set.loc[start_date_test_set:end_date_test_set]
 df_out_sample_set = df_total_set.loc[start_date_out_sample_set:end_date_out_sample_set]
