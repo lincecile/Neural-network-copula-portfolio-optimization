@@ -1,10 +1,9 @@
 import pandas as pd
+import numpy as np
 import pandas_market_calendars as mcal
 
 df = pd.read_csv(r"data/px_last.csv", index_col=0, parse_dates=True)
 df = df[['SPY US Equity','DIA US Equity', 'QQQ US Equity']]
-
-df = df.pct_change().dropna()
 
 start_date_total_set = "2011-01-03"
 end_date_total_set = "2025-05-03"
@@ -18,6 +17,11 @@ trading_days_index = trading_days.index
 
 # df utilisé dans le papier
 df_total_set = df.loc[df.index.intersection(trading_days_index)]
+
+df_total_set = df_total_set.resample('W').last()
+df_total_set = np.log(df_total_set / df_total_set.shift(1)).dropna()
+
+# df = df.pct_change().dropna()
 
 ###############################################################################
 ########################## Répartition des périodes ###########################
