@@ -33,7 +33,8 @@ for col in returns.columns:
         "ADF (p value)": adf_p
     }
 
-desc_stats_df = pd.DataFrame(stats).T
+desc_stats_df = pd.DataFrame(stats)
+desc_stats_df = desc_stats_df[['SPY US Equity','DIA US Equity', 'QQQ US Equity']]
 
 # PANEL B: Matrice de corrélation
 
@@ -44,8 +45,10 @@ pearson_corr = returns.corr()
 spearman_corr = returns.corr(method='spearman')
 
 # Affichage
+
 print("Panel A: Descriptive statistics")
 print(desc_stats_df.round(5))
+
 print("\nPanel B: Correlation matrix (Pearson followed by Spearman in brackets)")
 for row in returns.columns:
     line = []
