@@ -2,16 +2,26 @@ import pandas as pd
 import numpy as np
 from scipy.stats import jarque_bera, spearmanr
 from statsmodels.tsa.stattools import adfuller
+import pandas_market_calendars as mcal
 
 df = pd.read_csv(r"data/px_last.csv", index_col=0, parse_dates=True)
 
+start_date = "2011-01-03"
+end_date = "2015-04-13"
+max_date = "2025-05-03"
 
+# Jours de bourse aux États-Unis (NYSE)
+nyse = mcal.get_calendar("NYSE")
+
+# Obtenir tous les jours d'ouverture du marché entre les deux dates
+trading_days = nyse.schedule(start_date=start_date, end_date=end_date)
+trading_days_index = trading_days.index
+
+df = df.loc[df.index.intersection(trading_days_index)]
 
 ############################################################################
 ####### TABLE 2 Descriptive statistics and correlation matrix ##############
 ############################################################################
-
-df = df.loc["2011-01-03":"2015-04-13"]
 
 # Calcul des rendements logarithmiques
 returns = np.log(df / df.shift(1)).dropna()
