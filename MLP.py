@@ -5,6 +5,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
 from clean_df_paper import df_total_set, df_training_set, df_test_set, df_out_sample_set
 from metrics_forecast_error import mean_absolute_error, mean_absolute_percentage_error, root_mean_squared_error, theil_u_statistic
+from test_statistic import diebold_mariano_test, pesaran_timmermann_test
 
 # ----- Fonction pour créer des lags -----
 def create_lag_features(df, target_col='return', n_lags=5):
@@ -67,3 +68,14 @@ print("MAE:", mean_absolute_error(y_out, y_pred_out))
 print("MAPE:", mean_absolute_percentage_error(y_out, y_pred_out))
 print("RMSE:", root_mean_squared_error(y_out, y_pred_out))
 print("theil_u_statistic:", theil_u_statistic(y_out, y_pred_out))
+
+
+# ----- Test Statistique -----
+# Prédiction naïve = lag 1 (car on prédit t+1 à partir de t)
+y_pred_naive_out = df_out_lagged['lag_1'].values
+
+dm_stat = diebold_mariano_test(y_out.values, y_pred_out, y_pred_naive_out)
+print(f"📉 DM Test vs Naive Out-of-Sample: Statistic = {dm_stat:.3f}")
+
+pt_stat, pt_pval = pesaran_timmermann_test(y_out, y_pred_out)
+print(f"\n🧭 PT Test Out-of-Sample: Statistic = {pt_stat:.3f}, p-value = {pt_pval:.3f}")
