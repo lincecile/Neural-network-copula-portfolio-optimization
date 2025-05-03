@@ -1,7 +1,7 @@
 import pandas as pd
 from scipy.stats import jarque_bera, spearmanr
 from statsmodels.tsa.stattools import adfuller
-from Clean_df_paper import df_total_set
+from clean_df_paper import df_total_set
 
 ############################################################################
 ####### TABLE 2 Descriptive statistics and correlation matrix ##############

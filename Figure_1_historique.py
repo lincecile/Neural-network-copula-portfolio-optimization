@@ -1,5 +1,5 @@
 import pandas as pd
-from Clean_df_paper import df_total_set
+from clean_df_paper import df_total_set
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 

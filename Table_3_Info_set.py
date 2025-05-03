@@ -1,5 +1,5 @@
 import pandas as pd
-from Clean_df_paper import df_total_set, df_training_set, df_test_set, df_out_sample_set
+from clean_df_paper import df_total_set, df_training_set, df_test_set, df_out_sample_set
 
 ############################################################################
 ######################### TABLE 3 The total data-set #######################
