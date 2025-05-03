@@ -5,6 +5,7 @@ from statsmodels.tsa.stattools import adfuller
 import pandas_market_calendars as mcal
 
 df = pd.read_csv(r"data/px_last.csv", index_col=0, parse_dates=True)
+df = df[['SPY US Equity','DIA US Equity', 'QQQ US Equity']]
 
 start_date = "2011-01-03"
 end_date = "2015-04-13"
@@ -25,6 +26,7 @@ df = df.loc[df.index.intersection(trading_days_index)]
 
 # Calcul des rendements logarithmiques
 returns = np.log(df / df.shift(1)).dropna()
+returns = df.pct_change().dropna()
 
 # PANEL A: Statistiques descriptives
 stats = {}
@@ -44,7 +46,6 @@ for col in returns.columns:
     }
 
 desc_stats_df = pd.DataFrame(stats)
-desc_stats_df = desc_stats_df[['SPY US Equity','DIA US Equity', 'QQQ US Equity']]
 
 # PANEL B: Matrice de corrélation
 
