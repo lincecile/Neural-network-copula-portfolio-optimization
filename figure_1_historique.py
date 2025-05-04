@@ -1,12 +1,12 @@
 import pandas as pd
-from clean_df_paper import df_total_set
+from clean_df_paper import df_total_set_prix
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 plt.figure(figsize=(10, 6))
-plt.plot(df_total_set.index, df_total_set[df_total_set.columns[0]], label=df_total_set.columns[0])
-plt.plot(df_total_set.index, df_total_set[df_total_set.columns[1]], label=df_total_set.columns[1])
-plt.plot(df_total_set.index, df_total_set[df_total_set.columns[2]], label=df_total_set.columns[2])
+plt.plot(df_total_set_prix.index, df_total_set_prix[df_total_set_prix.columns[0]], label=df_total_set_prix.columns[0])
+plt.plot(df_total_set_prix.index, df_total_set_prix[df_total_set_prix.columns[1]], label=df_total_set_prix.columns[1])
+plt.plot(df_total_set_prix.index, df_total_set_prix[df_total_set_prix.columns[2]], label=df_total_set_prix.columns[2])
 
 plt.xlabel('Date')
 plt.ylabel('Price')

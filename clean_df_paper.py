@@ -16,10 +16,14 @@ trading_days = nyse.schedule(start_date=start_date_total_set, end_date=end_date_
 trading_days_index = trading_days.index
 
 # df utilisé dans le papier
-df_total_set = df.loc[df.index.intersection(trading_days_index)]
+df_total_set_prix = df.loc[df.index.intersection(trading_days_index)]
 
-df_total_set = df_total_set.resample('W').last()
-df_total_set = np.log(df_total_set / df_total_set.shift(1)).dropna()
+# df daily returns
+df_total_set_daily = np.log(df_total_set_prix / df_total_set_prix.shift(1)).dropna()
+
+# df weekly returns
+df_total_set_weekly = df_total_set_prix.resample('W-MON').first()
+df_total_set_weekly = np.log(df_total_set_weekly / df_total_set_weekly.shift(1)).dropna()
 
 ###############################################################################
 ########################## Création des set ###################################
@@ -40,8 +44,14 @@ start_date_out_sample_set = "2014-01-02"
 end_date_out_sample_set = end_date_total_set
 
 # Création des ensembles de données
-df_in_sample_set = df_total_set.loc[start_date_training_set:end_date_test_set]
-df_training_set = df_total_set.loc[start_date_training_set:end_date_training_set]
-df_test_set = df_total_set.loc[start_date_test_set:end_date_test_set]
-df_out_sample_set = df_total_set.loc[start_date_out_sample_set:end_date_out_sample_set]
+df_in_sample_set_daily = df_total_set_daily.loc[start_date_training_set:end_date_test_set]
+df_training_set_daily = df_total_set_daily.loc[start_date_training_set:end_date_training_set]
+df_test_set_daily = df_total_set_daily.loc[start_date_test_set:end_date_test_set]
+df_out_sample_set_daily = df_total_set_daily.loc[start_date_out_sample_set:end_date_out_sample_set]
+
+# Création des ensembles de données utiles pour les portfolios
+df_in_sample_set_weekly = df_total_set_weekly.loc[start_date_training_set:end_date_test_set]
+df_training_set_weekly = df_total_set_weekly.loc[start_date_training_set:end_date_training_set]
+df_test_set_weekly = df_total_set_weekly.loc[start_date_test_set:end_date_test_set]
+df_out_sample_set_weekly = df_total_set_weekly.loc[start_date_out_sample_set:end_date_out_sample_set]
 
