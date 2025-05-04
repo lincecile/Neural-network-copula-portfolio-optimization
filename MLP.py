@@ -10,13 +10,13 @@ from test_statistic import diebold_mariano_test, pesaran_timmermann_test
 # ----- Fonction pour créer des lags -----
 def create_lag_features(df, target_col='return', n_lags=5):
     df_lagged = df.copy()
-    for lag in range(1, n_lags + 1):
+    for lag in [1,3,5,6,8,9,12]:
         df_lagged[f'lag_{lag}'] = df_lagged[target_col].shift(lag)
     df_lagged['target'] = df_lagged[target_col].shift(-1)  # prédire le return à t+1
     return df_lagged.dropna()
 
 # ----- Paramètres -----
-n_lags = 20
+n_lags = 3
 df_training_set = df_training_set[df_training_set.columns[0]].to_frame()
 df_test_set = df_test_set[df_test_set.columns[0]].to_frame()
 df_out_sample_set = df_out_sample_set[df_out_sample_set.columns[0]].to_frame()
@@ -38,16 +38,17 @@ y_out = df_out_lagged['target']
 
 # ----- Standardisation -----
 scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
+X_train_scaled =  scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 X_out_scaled = scaler.transform(X_out)
 
 # ----- Définition et entraînement du MLP -----
-mlp = MLPRegressor(hidden_layer_sizes=(10,),
-                   activation='relu',
-                   solver='adam',
-                   max_iter=500,
-                   random_state=42)
+mlp = MLPRegressor(hidden_layer_sizes=(6,),
+                   solver='sgd',
+                   max_iter=30000,
+                   random_state=42,
+                   learning_rate_init=0.003,
+                   momentum=0.004)
 
 mlp.fit(X_train_scaled, y_train)
 
@@ -70,6 +71,7 @@ print("RMSE:", root_mean_squared_error(y_out, y_pred_out))
 print("theil_u_statistic:", theil_u_statistic(y_out, y_pred_out))
 
 
+exit()
 # ----- Test Statistique -----
 # Prédiction naïve = lag 1 (car on prédit t+1 à partir de t)
 y_pred_naive_out = df_out_lagged['lag_1'].values
