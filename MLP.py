@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.preprocessing import StandardScaler
-from clean_df_paper import df_total_set, df_training_set, df_test_set, df_out_sample_set
+from clean_df_paper import df_training_set_daily, df_test_set_daily, df_out_sample_set_daily
 from metrics_forecast_error import mean_absolute_error, mean_absolute_percentage_error, root_mean_squared_error, theil_u_statistic
 from test_statistic import diebold_mariano_test, pesaran_timmermann_test
 
@@ -25,55 +25,20 @@ mlp_config = {
 }
 
 # ----- Fonction pour créer des lags -----
-def create_lag_features(df, target_col='return', n_lags=5):
+def create_lag_features(df, target_col, lags=[1, 2, 3]):
     df_lagged = df.copy()
-    for lag in [1,3,5,6,8,9,12]:
+    for lag in lags:
         df_lagged[f'lag_{lag}'] = df_lagged[target_col].shift(lag)
     df_lagged['target'] = df_lagged[target_col].shift(-1)  # prédire le return à t+1
     return df_lagged.dropna()
 
-# ----- Paramètres -----
-n_lags = 3
-df_training_set = df_training_set[df_training_set.columns[0]].to_frame()
-df_test_set = df_test_set[df_test_set.columns[0]].to_frame()
-df_out_sample_set = df_out_sample_set[df_out_sample_set.columns[0]].to_frame()
-
-# ----- Création des features -----
-df_train_lagged = create_lag_features(df_training_set, target_col=df_training_set.columns[0], n_lags=n_lags)
-df_test_lagged = create_lag_features(df_test_set, target_col=df_test_set.columns[0], n_lags=n_lags)
-df_out_lagged = create_lag_features(df_out_sample_set, target_col=df_out_sample_set.columns[0], n_lags=n_lags)
-
-# ----- Séparation des features/target -----
-X_train = df_train_lagged.drop(columns=['target',df_train_lagged.columns[0]])
-y_train = df_train_lagged['target']
-
-X_test = df_test_lagged.drop(columns=['target',df_test_lagged.columns[0]])
-y_test = df_test_lagged['target']
-
-X_out = df_out_lagged.drop(columns=['target',df_out_lagged.columns[0]])
-y_out = df_out_lagged['target']
-
-# ----- Standardisation -----
-scaler = StandardScaler()
-X_train_scaled =  scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
-X_out_scaled = scaler.transform(X_out)
-
-#Convert to torch tensors
-X_train_scaled = torch.tensor(X_train_scaled, dtype=torch.float32)
-X_test_scaled = torch.tensor(X_test_scaled, dtype=torch.float32)
-X_out_scaled = torch.tensor(X_out_scaled, dtype=torch.float32)
-y_train_tensor = torch.tensor(y_train.values, dtype=torch.float32).view(-1, 1)
-y_test_tensor = torch.tensor(y_test.values, dtype=torch.float32).view(-1, 1)
-y_out_tensor = torch.tensor(y_out.values, dtype=torch.float32).view(-1, 1)
-
 #define the model
 class MLP(nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size, hidden_nodes=6):
         super(MLP, self).__init__()
         # Define layers: input (7 nodes) -> hidden (6 nodes) -> output (1 node)
-        self.fc1 = nn.Linear(input_size, 6)
-        self.fc2 = nn.Linear(6, 1)
+        self.fc1 = nn.Linear(input_size, hidden_nodes)
+        self.fc2 = nn.Linear(hidden_nodes, 1)
         self.init_weights()
 
     def init_weights(self):
@@ -89,26 +54,6 @@ class MLP(nn.Module):
         x = torch.relu(self.fc1(x))
         x = self.fc2(x)
         return x
-
-# Instantiate the model with 7 input nodes
-model = MLP(input_size=7)
-
-# Define loss function and optimizer using Gradient Descent (SGD)
-criterion = nn.MSELoss()
-optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.004)
-
-# Training loop with 30000 iterations
-num_iterations = 30000
-for step in range(num_iterations):
-    optimizer.zero_grad()
-    predictions = model(X_train_scaled)
-    loss = criterion(predictions, y_train_tensor)
-    loss.backward()
-    optimizer.step()
-
-# Make predictions on test and out-of-sample sets
-y_pred_test = model(X_test_scaled).detach().numpy()
-y_pred_out = model(X_out_scaled).detach().numpy()
 
 # ----- Évaluation -----
 def evaluate_performance(y_true, y_pred, dataset_name="Dataset"):
@@ -132,9 +77,86 @@ def evaluate_performance(y_true, y_pred, dataset_name="Dataset"):
     print(f"Theil's U  : {theil:.4f}")
     print("=" * 40)
 
-evaluate_performance(y_test, y_pred_test, "Test Set")
-evaluate_performance(y_out, y_pred_out, "Out-of-Sample")
 
+def main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iteration_steps, init_weights, hidden_nodes):
+
+    # ----- Data -----
+    df_training_set = df_training_set_daily[ticker].to_frame()
+    df_test_set = df_test_set_daily[ticker].to_frame()
+    df_out_sample_set = df_out_sample_set_daily[ticker].to_frame()
+
+    # ----- Création des features -----
+    df_train_lagged = create_lag_features(df_training_set, target_col=df_training_set.columns[0], lags=lags_list)
+    df_test_lagged = create_lag_features(df_test_set, target_col=df_training_set.columns[0], lags=lags_list)
+    df_out_lagged = create_lag_features(df_out_sample_set, target_col=df_training_set.columns[0], lags=lags_list)
+
+    # ----- Séparation des features/target -----
+    X_train = df_train_lagged.drop(columns=['target',df_train_lagged.columns[0]])
+    y_train = df_train_lagged['target']
+
+    X_test = df_test_lagged.drop(columns=['target',df_test_lagged.columns[0]])
+    y_test = df_test_lagged['target']
+
+    X_out = df_out_lagged.drop(columns=['target',df_out_lagged.columns[0]])
+    y_out = df_out_lagged['target']
+
+    # ----- Standardisation -----
+    scaler = StandardScaler()
+    X_train_scaled =  scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    X_out_scaled = scaler.transform(X_out)
+
+    #Convert to torch tensors
+    X_train_scaled = torch.tensor(X_train_scaled, dtype=torch.float32)
+    X_test_scaled = torch.tensor(X_test_scaled, dtype=torch.float32)
+    X_out_scaled = torch.tensor(X_out_scaled, dtype=torch.float32)
+    y_train_tensor = torch.tensor(y_train.values, dtype=torch.float32).view(-1, 1)
+    y_test_tensor = torch.tensor(y_test.values, dtype=torch.float32).view(-1, 1)
+    y_out_tensor = torch.tensor(y_out.values, dtype=torch.float32).view(-1, 1)
+
+    # Instantiate the model with 7 input nodes
+    model = MLP(input_size=7, hidden_nodes=hidden_nodes)
+
+    # Define loss function and optimizer using Gradient Descent (SGD)
+    criterion = nn.MSELoss()
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
+    print('pb dans la boucle ')
+    # Training loop with 30000 iterations
+    num_iterations = iteration_steps
+    for step in range(num_iterations):
+        optimizer.zero_grad()
+        predictions = model(X_train_scaled)
+        loss = criterion(predictions, y_train_tensor)
+        loss.backward()
+        optimizer.step()
+    
+    # Make predictions on test and out-of-sample sets
+    y_pred_test = model(X_test_scaled).detach().numpy()
+    y_pred_out = model(X_out_scaled).detach().numpy()
+
+    evaluate_performance(y_test, y_pred_test, "Test Set")
+    evaluate_performance(y_out, y_pred_out, "Out-of-Sample")
+    
+    return y_test, y_pred_test, y_out, y_pred_out
+
+# ----- Boucle sur les tickers -----
+
+for i in range(len(mlp_config["tickers"])):
+    ticker = mlp_config["tickers"][i]
+    lags_list = mlp_config["lags"][i]
+    learning_algorithm = mlp_config["learning_algorithm"][i]
+    learning_rate = mlp_config["learning_rate"][i]
+    momentum = mlp_config["momentum"][i]
+    iteration_steps = mlp_config["iteration_steps"][i]
+    init_weights = mlp_config["init_weights"][i]
+    hidden_nodes = mlp_config["hidden_nodes"][i]
+
+    print(f"------------------ Ticker: {ticker} ------------------")
+    
+    y_test, y_pred_test, y_out, y_pred_out = main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iteration_steps, init_weights, hidden_nodes)
+
+
+exit()
 # ----- Test Statistique -----
 # Prédiction naïve = lag 1 (car on prédit t+1 à partir de t)
 y_pred_naive_out = df_out_lagged['lag_1'].values
