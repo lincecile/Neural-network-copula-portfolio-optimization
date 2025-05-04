@@ -115,12 +115,12 @@ def main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iterati
     y_out_tensor = torch.tensor(y_out.values, dtype=torch.float32).view(-1, 1)
 
     # Instantiate the model with 7 input nodes
-    model = MLP(input_size=7, hidden_nodes=hidden_nodes)
+    model = MLP(input_size=X_train_scaled.shape[1], hidden_nodes=hidden_nodes)
 
     # Define loss function and optimizer using Gradient Descent (SGD)
     criterion = nn.MSELoss()
     optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
-    print('pb dans la boucle ')
+
     # Training loop with 30000 iterations
     num_iterations = iteration_steps
     for step in range(num_iterations):
