@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.preprocessing import StandardScaler
-from clean_df_paper import df_total_set, df_training_set, df_test_set, df_out_sample_set
+from clean_df_paper import df_total_set_prix, df_training_set_daily, df_test_set_daily, df_out_sample_set_daily
 from metrics_forecast_error import mean_absolute_error, mean_absolute_percentage_error, root_mean_squared_error, theil_u_statistic
 from test_statistic import diebold_mariano_test, pesaran_timmermann_test
 
@@ -35,9 +35,9 @@ def create_lag_features(df, target_col='return', n_lags=5):
 
 # ----- Paramètres -----
 n_lags = 3
-df_training_set = df_training_set[df_training_set.columns[0]].to_frame()
-df_test_set = df_test_set[df_test_set.columns[0]].to_frame()
-df_out_sample_set = df_out_sample_set[df_out_sample_set.columns[0]].to_frame()
+df_training_set = df_training_set_daily[df_training_set_daily.columns[0]].to_frame()
+df_test_set = df_test_set_daily[df_test_set_daily.columns[0]].to_frame()
+df_out_sample_set = df_out_sample_set_daily[df_out_sample_set_daily.columns[0]].to_frame()
 
 # ----- Création des features -----
 df_train_lagged = create_lag_features(df_training_set, target_col=df_training_set.columns[0], n_lags=n_lags)
