@@ -2,6 +2,9 @@ import pandas as pd
 import numpy as np
 from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import mean_squared_error, r2_score
+import torch
+import torch.nn as nn
+import torch.optim as optim
 from sklearn.preprocessing import StandardScaler
 from clean_df_paper import df_total_set, df_training_set, df_test_set, df_out_sample_set
 from metrics_forecast_error import mean_absolute_error, mean_absolute_percentage_error, root_mean_squared_error, theil_u_statistic
@@ -42,36 +45,82 @@ X_train_scaled =  scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 X_out_scaled = scaler.transform(X_out)
 
-# ----- Définition et entraînement du MLP -----
-mlp = MLPRegressor(hidden_layer_sizes=(6,),
-                   solver='sgd',
-                   max_iter=30000,
-                   random_state=42,
-                   learning_rate_init=0.003,
-                   momentum=0.004)
+#Convert to torch tensors
+X_train_scaled = torch.tensor(X_train_scaled, dtype=torch.float32)
+X_test_scaled = torch.tensor(X_test_scaled, dtype=torch.float32)
+X_out_scaled = torch.tensor(X_out_scaled, dtype=torch.float32)
+y_train_tensor = torch.tensor(y_train.values, dtype=torch.float32).view(-1, 1)
+y_test_tensor = torch.tensor(y_test.values, dtype=torch.float32).view(-1, 1)
+y_out_tensor = torch.tensor(y_out.values, dtype=torch.float32).view(-1, 1)
 
-mlp.fit(X_train_scaled, y_train)
+#define the model
+class MLP(nn.Module):
+    def __init__(self, input_size):
+        super(MLP, self).__init__()
+        # Define layers: input (7 nodes) -> hidden (6 nodes) -> output (1 node)
+        self.fc1 = nn.Linear(input_size, 6)
+        self.fc2 = nn.Linear(6, 1)
+        self.init_weights()
 
-# ----- Prédictions -----
-y_pred_test = mlp.predict(X_test_scaled)
-y_pred_out = mlp.predict(X_out_scaled)
+    def init_weights(self):
+        # Initialize weights with N(0, 1) and biases with 0
+        nn.init.normal_(self.fc1.weight, mean=0.0, std=1.0)
+        nn.init.normal_(self.fc2.weight, mean=0.0, std=1.0)
+        if self.fc1.bias is not None:
+            nn.init.constant_(self.fc1.bias, 0)
+        if self.fc2.bias is not None:
+            nn.init.constant_(self.fc2.bias, 0)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+# Instantiate the model with 7 input nodes
+model = MLP(input_size=7)
+
+# Define loss function and optimizer using Gradient Descent (SGD)
+criterion = nn.MSELoss()
+optimizer = optim.SGD(model.parameters(), lr=0.003, momentum=0.004)
+
+# Training loop with 30000 iterations
+num_iterations = 30000
+for step in range(num_iterations):
+    optimizer.zero_grad()
+    predictions = model(X_train_scaled)
+    loss = criterion(predictions, y_train_tensor)
+    loss.backward()
+    optimizer.step()
+
+# Make predictions on test and out-of-sample sets
+y_pred_test = model(X_test_scaled).detach().numpy()
+y_pred_out = model(X_out_scaled).detach().numpy()
 
 # ----- Évaluation -----
-print("📊 Test Set:")
-print("MAE:", mean_absolute_error(y_test, y_pred_test))
-print("MAPE:", mean_absolute_percentage_error(y_test, y_pred_test))
-print("RMSE:", root_mean_squared_error(y_test, y_pred_test))
-print("theil_u_statistic:", theil_u_statistic(y_test, y_pred_test))
+def evaluate_performance(y_true, y_pred, dataset_name="Dataset"):
+    # Ensure both arrays are 1-dimensional
+    y_true = np.array(y_true).flatten()
+    y_pred = np.array(y_pred).flatten()
+    
+    mae = mean_absolute_error(y_true, y_pred)
+    mape = mean_absolute_percentage_error(y_true, y_pred)
+    rmse = root_mean_squared_error(y_true, y_pred)
+    mse = mean_squared_error(y_true, y_pred)
+    r2 = r2_score(y_true, y_pred)
+    theil = theil_u_statistic(y_true, y_pred)
+    
+    print(f"📊 {dataset_name}:")
+    print(f"MAE         : {mae:.4f}")
+    print(f"MAPE        : {mape:.4f}")
+    print(f"RMSE        : {rmse:.4f}")
+    print(f"MSE         : {mse:.4f}")
+    print(f"R2 Score    : {r2:.4f}")
+    print(f"Theil's U  : {theil:.4f}")
+    print("=" * 40)
 
+evaluate_performance(y_test, y_pred_test, "Test Set")
+evaluate_performance(y_out, y_pred_out, "Out-of-Sample")
 
-print("\n📊 Out-of-sample:")
-print("MAE:", mean_absolute_error(y_out, y_pred_out))
-print("MAPE:", mean_absolute_percentage_error(y_out, y_pred_out))
-print("RMSE:", root_mean_squared_error(y_out, y_pred_out))
-print("theil_u_statistic:", theil_u_statistic(y_out, y_pred_out))
-
-
-exit()
 # ----- Test Statistique -----
 # Prédiction naïve = lag 1 (car on prédit t+1 à partir de t)
 y_pred_naive_out = df_out_lagged['lag_1'].values
@@ -79,5 +128,5 @@ y_pred_naive_out = df_out_lagged['lag_1'].values
 dm_stat = diebold_mariano_test(y_out.values, y_pred_out, y_pred_naive_out)
 print(f"📉 DM Test vs Naive Out-of-Sample: Statistic = {dm_stat:.3f}")
 
-pt_stat, pt_pval = pesaran_timmermann_test(y_out, y_pred_out)
+pt_stat, pt_pval = pesaran_timmermann_test(y_out, np.array(y_pred_out).flatten())
 print(f"\n🧭 PT Test Out-of-Sample: Statistic = {pt_stat:.3f}, p-value = {pt_pval:.3f}")
