@@ -1,18 +1,30 @@
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
-from clean_df_paper import df_total_set, df_in_sample_set, df_training_set, df_test_set, df_out_sample_set
+from clean_df_paper import df_training_set_daily
 
-# Crée un sous-plot pour chaque série de prix
-fig, axes = plt.subplots(3, 2, figsize=(8, 8))
+def autocorrelation_analysis(returns_series, etf_name):
+    """
+    Calcule et visualise l'autocorrélation et l'autocorrélation partielle
+    """
+    plt.figure(figsize=(15,5))
+    
+    # Autocorrélation
+    plt.subplot(121)
+    from statsmodels.graphics.tsaplots import plot_acf
+    plot_acf(returns_series, lags=20, ax=plt.gca(), title=f'Autocorrélation - {etf_name}', alpha=0.1)
+    plt.title(f'Autocorrélation - {etf_name}')
+    
+    # Autocorrélation partielle
+    plt.subplot(122)
+    from statsmodels.graphics.tsaplots import plot_pacf
+    plot_pacf(returns_series, lags=20, ax=plt.gca(), title=f'Autocorrélation Partielle - {etf_name}', alpha=0.1)
+    plt.title(f'Autocorrélation Partielle - {etf_name}')
+    
+    plt.tight_layout()
+    plt.show()
+    
 
-for i, col in enumerate(df_in_sample_set.columns):
-    plot_acf(df_in_sample_set[col].dropna(), ax=axes[i, 0], lags=15)
-    plot_pacf(df_in_sample_set[col].dropna(), ax=axes[i, 1], lags=15)
-    axes[i, 0].set_title(f"ACF de {col}")
-    axes[i, 1].set_title(f"PACF de {col}")
-
-plt.tight_layout()
-plt.show()
-
-
+for etf in df_training_set_daily.columns:
+    print(f"\nAnalyse de l'autocorrélation pour {etf}")
+    autocorrelation_analysis(df_training_set_daily[etf], etf)
