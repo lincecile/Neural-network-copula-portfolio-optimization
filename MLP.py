@@ -141,28 +141,27 @@ def main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iterati
 
 # ----- Boucle sur les tickers -----
 
-for i in range(len(mlp_config["tickers"])):
-    ticker = mlp_config["tickers"][i]
-    lags_list = mlp_config["lags"][i]
-    learning_algorithm = mlp_config["learning_algorithm"][i]
-    learning_rate = mlp_config["learning_rate"][i]
-    momentum = mlp_config["momentum"][i]
-    iteration_steps = mlp_config["iteration_steps"][i]
-    init_weights = mlp_config["init_weights"][i]
-    hidden_nodes = mlp_config["hidden_nodes"][i]
+# for i in range(len(mlp_config["tickers"])):
+#     ticker = mlp_config["tickers"][i]
+#     lags_list = mlp_config["lags"][i]
+#     learning_algorithm = mlp_config["learning_algorithm"][i]
+#     learning_rate = mlp_config["learning_rate"][i]
+#     momentum = mlp_config["momentum"][i]
+#     iteration_steps = mlp_config["iteration_steps"][i]
+#     init_weights = mlp_config["init_weights"][i]
+#     hidden_nodes = mlp_config["hidden_nodes"][i]
 
-    print(f"------------------ Ticker: {ticker} ------------------")
+#     print(f"------------------ Ticker: {ticker} ------------------")
     
-    y_test, y_pred_test, y_out, y_pred_out = main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iteration_steps, init_weights, hidden_nodes)
+#     y_test, y_pred_test, y_out, y_pred_out = main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iteration_steps, init_weights, hidden_nodes)
 
 
-exit()
 # ----- Test Statistique -----
 # Prédiction naïve = lag 1 (car on prédit t+1 à partir de t)
-y_pred_naive_out = df_out_lagged['lag_1'].values
+# y_pred_naive_out = df_out_lagged['lag_1'].values
 
-dm_stat = diebold_mariano_test(y_out.values, y_pred_out, y_pred_naive_out)
-print(f"📉 DM Test vs Naive Out-of-Sample: Statistic = {dm_stat:.3f}")
+# dm_stat = diebold_mariano_test(y_out.values, y_pred_out, y_pred_naive_out)
+# print(f"📉 DM Test vs Naive Out-of-Sample: Statistic = {dm_stat:.3f}")
 
-pt_stat, pt_pval = pesaran_timmermann_test(y_out, np.array(y_pred_out).flatten())
-print(f"\n🧭 PT Test Out-of-Sample: Statistic = {pt_stat:.3f}, p-value = {pt_pval:.3f}")
+# pt_stat, pt_pval = pesaran_timmermann_test(y_out, np.array(y_pred_out).flatten())
+# print(f"\n🧭 PT Test Out-of-Sample: Statistic = {pt_stat:.3f}, p-value = {pt_pval:.3f}")
