@@ -25,6 +25,3 @@ def autocorrelation_analysis(returns_series, etf_name):
     plt.show()
     
 
-for etf in df_training_set_daily.columns:
-    print(f"\nAnalyse de l'autocorrélation pour {etf}")
-    autocorrelation_analysis(df_training_set_daily[etf], etf)
