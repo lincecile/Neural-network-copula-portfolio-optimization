@@ -141,6 +141,8 @@ def main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iterati
 
 # ----- Boucle sur les tickers -----
 
+result_dict = {}
+
 # for i in range(len(mlp_config["tickers"])):
 #     ticker = mlp_config["tickers"][i]
 #     lags_list = mlp_config["lags"][i]
@@ -155,9 +157,11 @@ def main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iterati
     
 #     y_test, y_pred_test, y_out, y_pred_out = main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iteration_steps, init_weights, hidden_nodes)
 
+    result_dict[ticker] = y_pred_out
 
-# ----- Test Statistique -----
-# Prédiction naïve = lag 1 (car on prédit t+1 à partir de t)
+# exit()
+# # ----- Test Statistique -----
+# # Prédiction naïve = lag 1 (car on prédit t+1 à partir de t)
 # y_pred_naive_out = df_out_lagged['lag_1'].values
 
 # dm_stat = diebold_mariano_test(y_out.values, y_pred_out, y_pred_naive_out)
