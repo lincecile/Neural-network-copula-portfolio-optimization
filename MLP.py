@@ -143,19 +143,19 @@ def main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iterati
 
 result_dict = {}
 
-# for i in range(len(mlp_config["tickers"])):
-#     ticker = mlp_config["tickers"][i]
-#     lags_list = mlp_config["lags"][i]
-#     learning_algorithm = mlp_config["learning_algorithm"][i]
-#     learning_rate = mlp_config["learning_rate"][i]
-#     momentum = mlp_config["momentum"][i]
-#     iteration_steps = mlp_config["iteration_steps"][i]
-#     init_weights = mlp_config["init_weights"][i]
-#     hidden_nodes = mlp_config["hidden_nodes"][i]
+for i in range(len(mlp_config["tickers"])):
+    ticker = mlp_config["tickers"][i]
+    lags_list = mlp_config["lags"][i]
+    learning_algorithm = mlp_config["learning_algorithm"][i]
+    learning_rate = mlp_config["learning_rate"][i]
+    momentum = mlp_config["momentum"][i]
+    iteration_steps = mlp_config["iteration_steps"][i]
+    init_weights = mlp_config["init_weights"][i]
+    hidden_nodes = mlp_config["hidden_nodes"][i]
 
-#     print(f"------------------ Ticker: {ticker} ------------------")
+    print(f"------------------ Ticker: {ticker} ------------------")
     
-#     y_test, y_pred_test, y_out, y_pred_out = main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iteration_steps, init_weights, hidden_nodes)
+    y_test, y_pred_test, y_out, y_pred_out = main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iteration_steps, init_weights, hidden_nodes)
 
     result_dict[ticker] = y_pred_out
 
