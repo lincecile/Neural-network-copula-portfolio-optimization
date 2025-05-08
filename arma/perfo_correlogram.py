@@ -16,10 +16,10 @@ def autocorrelation_analysis(returns_series, etf_name):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
     
     # Autocorrélation sur le premier subplot
-    plot_acf(returns_series, lags=20, alpha=0.1, ax=ax1, title=f'Autocorrélation - {etf_name}')
+    plot_acf(returns_series, lags=20, alpha=0.05, ax=ax1, title=f'Autocorrélation - {etf_name}')
     
     # Autocorrélation partielle sur le second subplot
-    plot_pacf(returns_series, lags=20, alpha=0.1, ax=ax2, title=f'Autocorrélation Partielle - {etf_name}')
+    plot_pacf(returns_series, lags=20, alpha=0.05, ax=ax2, title=f'Autocorrélation Partielle - {etf_name}')
     
     plt.tight_layout()
     plt.show()
