@@ -218,6 +218,8 @@ def main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iterati
     # ----- Make predictions -----
     y_pred_test = model(X_test_scaled).detach().numpy()
     y_pred_out = model(X_out_scaled).detach().numpy()
+    y_pred_out = pd.DataFrame(y_pred_out.flatten(), columns=[ticker + " PRED"], index=y_out.index)
+
     
     # ----- Evaluation -----
     evaluate_performance(y_test, y_pred_test, "Test Set")
@@ -226,6 +228,7 @@ def main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iterati
     return y_test, y_pred_test, y_out, y_pred_out
 
 result_dict = {}
+result_dict_df = {}
 for i in range(len(rnn_config["tickers"])):
     ticker = rnn_config["tickers"][i]
     lags_list = rnn_config["lags"][i]
@@ -244,6 +247,7 @@ for i in range(len(rnn_config["tickers"])):
     )
 
     result_dict[ticker] = y_pred_out
+    result_dict_df[ticker] = pd.DataFrame(y_pred_out.flatten(), columns=[ticker + " PRED"], index=y_out.index)
 
 # ----- Additional Statistical Tests -----
 # As an example, using the last run’s df_out_lagged to compute naive predictions.

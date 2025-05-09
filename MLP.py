@@ -142,6 +142,7 @@ def main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iterati
 # ----- Boucle sur les tickers -----
 
 result_dict = {}
+result_dict_df = {}
 
 for i in range(len(mlp_config["tickers"])):
     ticker = mlp_config["tickers"][i]
@@ -158,6 +159,7 @@ for i in range(len(mlp_config["tickers"])):
     y_test, y_pred_test, y_out, y_pred_out = main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iteration_steps, init_weights, hidden_nodes)
 
     result_dict[ticker] = y_pred_out
+    result_dict_df[ticker] = pd.DataFrame(y_pred_out.flatten(), columns=[ticker + " PRED"], index=y_out.index)
 
 # exit()
 # # ----- Test Statistique -----

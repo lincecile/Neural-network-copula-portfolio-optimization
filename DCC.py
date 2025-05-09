@@ -194,12 +194,16 @@ class DCCModel:
         return plt.gcf()
 
 # Exemple d'utilisation avec des données fictives
-# if __name__ == "__main__":
+if __name__ == "__main__":
 
-#     # Utiliser le modèle DCC
-#     dcc_model = DCCModel(df_training_set_weekly)
-#     dcc_model.fit_univariate_garch(p=1, q=1)
-#     dcc_model.fit_dcc()
+    # Utiliser le modèle DCC
+    dcc_model = DCCModel(df_training_set_weekly)
+    dcc_model.fit_univariate_garch(p=1, q=1)
+    dcc_model.fit_dcc()
+
+    # Récupérer les corrélations dynamiques
+    dynamic_corrs = dcc_model.get_dynamic_correlations()
+    print(dynamic_corrs)
     
 #     # Tracer les corrélations dynamiques
 #     dcc_model.plot_dynamic_correlations()

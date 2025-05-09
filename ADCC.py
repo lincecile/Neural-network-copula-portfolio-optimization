@@ -196,11 +196,15 @@ if __name__ == "__main__":
     adcc_model = ADCCModel(df_training_set_weekly)
     adcc_model.fit_univariate_garch(p=1, q=1)
     adcc_model.fit_adcc()
+
+    # Récupérer les corrélations dynamiques
+    dynamic_corrs = adcc_model.get_dynamic_correlations()
+    print(dynamic_corrs)
     
     # Tracer les corrélations dynamiques
-    adcc_model.plot_dynamic_correlations()
-    plt.show()
+    # adcc_model.plot_dynamic_correlations()
+    # plt.show()
     
-    # Tracer les volatilités conditionnelles
-    adcc_model.plot_conditional_volatilities()
-    plt.show()
+    # # Tracer les volatilités conditionnelles
+    # adcc_model.plot_conditional_volatilities()
+    # plt.show()
