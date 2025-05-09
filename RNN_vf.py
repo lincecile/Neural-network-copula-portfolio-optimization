@@ -7,14 +7,7 @@ from keras.layers import SimpleRNN, Dense
 from keras.callbacks import EarlyStopping
 import matplotlib.pyplot as plt
 import pandas as pd
-from clean_df_paper import get_daily_sets  # <- import données traitées
-
-# Charger les ensembles journaliers
-daily_sets = get_daily_sets()
-df_training_set_daily = daily_sets["training"]
-df_test_set_daily = daily_sets["test"]
-df_out_sample_set_daily = daily_sets["out_sample"]
-
+from clean_df_paper import df_test_set_daily, df_training_set_daily, df_out_sample_set_daily 
 
 # Préparation des séquences
 def prepare_data(series, seq_length):
