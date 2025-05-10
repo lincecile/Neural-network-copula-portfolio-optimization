@@ -1,0 +1,107 @@
+{
+  "SPY US Equity": {
+    "MLP": {
+      "Learning algorithm": "Gradient descent",
+      "Learning rate": 0.003,
+      "Momentum": 0.004,
+      "Iteration steps": 30000,
+      "Initialisation of weights": "N(0,1)",
+      "Input nodes": 7,
+      "Hidden nodes": 6,
+      "Output node": 1,
+      "Input lags": [1, 3, 5, 7, 8, 9, 12]
+    },
+    "RNN": {
+      "Learning algorithm": "Gradient descent",
+      "Learning rate": 0.003,
+      "Momentum": 0.005,
+      "Iteration steps": 40000,
+      "Initialisation of weights": "N(0,1)",
+      "Input nodes": 9,
+      "Hidden nodes": 6,
+      "Output node": 1,
+      "Input lags": [1, 3, 5, 7, 8, 9, 12]
+    },
+    "PSN": {
+      "Learning algorithm": "Gradient descent",
+      "Learning rate": 0.4,
+      "Momentum": 0.5,
+      "Iteration steps": 40000,
+      "Initialisation of weights": "N(0,1)",
+      "Input nodes": 7,
+      "Hidden nodes": 5,
+      "Output node": 1,
+      "Input lags": [1, 3, 5, 7, 8, 9, 12]
+    }
+  },
+  "DIA US Equity": {
+    "MLP": {
+      "Learning algorithm": "Gradient descent",
+      "Learning rate": 0.002,
+      "Momentum": 0.005,
+      "Iteration steps": 45000,
+      "Initialisation of weights": "N(0,1)",
+      "Input nodes": 7,
+      "Hidden nodes": 9,
+      "Output node": 1,
+      "Input lags": [1, 3, 5, 7, 8, 9, 12]
+    },
+    "RNN": {
+      "Learning algorithm": "Gradient descent",
+      "Learning rate": 0.005,
+      "Momentum": 0.006,
+      "Iteration steps": 35000,
+      "Initialisation of weights": "N(0,1)",
+      "Input nodes": 8,
+      "Hidden nodes": 7,
+      "Output node": 1,
+      "Input lags": [1, 3, 5, 7, 8, 9, 12]
+    },
+    "PSN": {
+      "Learning algorithm": "Gradient descent",
+      "Learning rate": 0.3,
+      "Momentum": 0.5,
+      "Iteration steps": 40000,
+      "Initialisation of weights": "N(0,1)",
+      "Input nodes": 7,
+      "Hidden nodes": 6,
+      "Output node": 1,
+      "Input lags": [1, 3, 5, 7, 8, 9, 12]
+    }
+  },
+  "QQQ US Equity": {
+    "MLP": {
+      "Learning algorithm": "Gradient descent",
+      "Learning rate": 0.003,
+      "Momentum": 0.005,
+      "Iteration steps": 30000,
+      "Initialisation of weights": "N(0,1)",
+      "Input nodes": 9,
+      "Hidden nodes": 8,
+      "Output node": 1,
+      "Input lags": [1, 3, 5, 7, 8, 9, 12]
+    },
+    "RNN": {
+      "Learning algorithm": "Gradient descent",
+      "Learning rate": 0.002,
+      "Momentum": 0.005,
+      "Iteration steps": 35000,
+      "Initialisation of weights": "N(0,1)",
+      "Input nodes": 8,
+      "Hidden nodes": 10,
+      "Output node": 1,
+      "Input lags": [1, 3, 5, 7, 8, 9, 12]
+    },
+    "PSN": {
+      "Learning algorithm": "Gradient descent",
+      "Learning rate": 0.3,
+      "Momentum": 0.4,
+      "Iteration steps": 25000,
+      "Initialisation of weights": "N(0,1)",
+      "Input nodes": 9,
+      "Hidden nodes": 8,
+      "Output node": 1,
+      "Input lags": [1, 3, 5, 7, 8, 9, 12]
+    }
+  }
+}
