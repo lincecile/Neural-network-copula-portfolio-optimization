@@ -8,9 +8,9 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 import torch
 
-from ..ticker_dataclass import Ticker
+from ticker_dataclass import Ticker
 
-from nn_model_dataclass import NnModel
+from .nn_model_dataclass import NnModel
 
 #%% functions
 
