@@ -144,23 +144,23 @@ def main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iterati
 result_dict = {}
 result_dict_df = {}
 
-for i in range(len(mlp_config["tickers"])):
-    ticker = mlp_config["tickers"][i]
-    lags_list = mlp_config["lags"][i]
-    learning_algorithm = mlp_config["learning_algorithm"][i]
-    learning_rate = mlp_config["learning_rate"][i]
-    momentum = mlp_config["momentum"][i]
-    iteration_steps = mlp_config["iteration_steps"][i]
-    init_weights = mlp_config["init_weights"][i]
-    hidden_nodes = mlp_config["hidden_nodes"][i]
+# for i in range(len(mlp_config["tickers"])):
+#     ticker = mlp_config["tickers"][i]
+#     lags_list = mlp_config["lags"][i]
+#     learning_algorithm = mlp_config["learning_algorithm"][i]
+#     learning_rate = mlp_config["learning_rate"][i]
+#     momentum = mlp_config["momentum"][i]
+#     iteration_steps = mlp_config["iteration_steps"][i]
+#     init_weights = mlp_config["init_weights"][i]
+#     hidden_nodes = mlp_config["hidden_nodes"][i]
 
-    print(f"------------------ Ticker: {ticker} ------------------")
-    
-    y_test, y_pred_test, y_out, y_pred_out = main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iteration_steps, init_weights, hidden_nodes)
+#     print(f"------------------ Ticker: {ticker} ------------------")
 
-    result_dict[ticker] = y_pred_out
-    result_dict_df[ticker] = pd.DataFrame(y_pred_out.flatten(), columns=[ticker + " PRED"], index=y_out.index)
+#     y_test, y_pred_test, y_out, y_pred_out = main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iteration_steps, init_weights, hidden_nodes)
 
+#     result_dict[ticker] = y_pred_out
+#     print(f"y_pred_out: {y_pred_out}")
+#     exit()
 # exit()
 # # ----- Test Statistique -----
 # # Prédiction naïve = lag 1 (car on prédit t+1 à partir de t)
@@ -171,3 +171,13 @@ for i in range(len(mlp_config["tickers"])):
 
 # pt_stat, pt_pval = pesaran_timmermann_test(y_out, np.array(y_pred_out).flatten())
 # print(f"\n🧭 PT Test Out-of-Sample: Statistic = {pt_stat:.3f}, p-value = {pt_pval:.3f}")
+
+# y_pred_out: [[ 5.3424825e-04]
+#  [ 5.2006292e-04]
+#  [ 7.8006391e-04]
+#  [ 9.8844210e-04]
+#  [-1.3810538e-03]
+#  [-5.3428103e-05]
+#  [-1.6644389e-03]
+#  [-3.2597394e-03]
+#  [ 4.3460820e-03]
