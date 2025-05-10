@@ -34,26 +34,21 @@ def create_lag_features(df, target_col, lags=[1, 2, 3]):
 
 #define the model
 class MLP(nn.Module):
-    def __init__(self, input_size, hidden_nodes=6):
+    def __init__(self, input_size, hidden_size, output_size=1):
         super(MLP, self).__init__()
-        # Define layers: input (7 nodes) -> hidden (6 nodes) -> output (1 node)
-        self.fc1 = nn.Linear(input_size, hidden_nodes)
-        self.fc2 = nn.Linear(hidden_nodes, 1)
-        self.init_weights()
-
-    def init_weights(self):
-        # Initialize weights with N(0, 1) and biases with 0
-        nn.init.normal_(self.fc1.weight, mean=0.0, std=1.0)
-        nn.init.normal_(self.fc2.weight, mean=0.0, std=1.0)
-        if self.fc1.bias is not None:
-            nn.init.constant_(self.fc1.bias, 0)
-        if self.fc2.bias is not None:
-            nn.init.constant_(self.fc2.bias, 0)
+        self.input_layer = nn.Linear(input_size, hidden_size)
+        self.output_layer = nn.Linear(hidden_size, output_size)
+        # Initialisation normale
+        nn.init.normal_(self.input_layer.weight, mean=0.0, std=0.01)
+        nn.init.normal_(self.output_layer.weight, mean=0.0, std=0.01)
+        nn.init.constant_(self.input_layer.bias, 0.0)
+        nn.init.constant_(self.output_layer.bias, 0.0)
 
     def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = torch.sigmoid(self.input_layer(x))
+        x = self.output_layer(x)
         return x
+
 
 # ----- Évaluation -----
 def evaluate_performance(y_true, y_pred, dataset_name="Dataset"):
@@ -115,7 +110,7 @@ def main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iterati
     y_out_tensor = torch.tensor(y_out.values, dtype=torch.float32).view(-1, 1)
 
     # Instantiate the model with 7 input nodes
-    model = MLP(input_size=X_train_scaled.shape[1], hidden_nodes=hidden_nodes)
+    model = MLP(input_size=X_train_scaled.shape[1], hidden_size=hidden_nodes)
 
     # Define loss function and optimizer using Gradient Descent (SGD)
     criterion = nn.MSELoss()
@@ -144,23 +139,23 @@ def main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iterati
 result_dict = {}
 result_dict_df = {}
 
-# for i in range(len(mlp_config["tickers"])):
-#     ticker = mlp_config["tickers"][i]
-#     lags_list = mlp_config["lags"][i]
-#     learning_algorithm = mlp_config["learning_algorithm"][i]
-#     learning_rate = mlp_config["learning_rate"][i]
-#     momentum = mlp_config["momentum"][i]
-#     iteration_steps = mlp_config["iteration_steps"][i]
-#     init_weights = mlp_config["init_weights"][i]
-#     hidden_nodes = mlp_config["hidden_nodes"][i]
+for i in range(len(mlp_config["tickers"])):
+    ticker = mlp_config["tickers"][i]
+    lags_list = mlp_config["lags"][i]
+    learning_algorithm = mlp_config["learning_algorithm"][i]
+    learning_rate = mlp_config["learning_rate"][i]
+    momentum = mlp_config["momentum"][i]
+    iteration_steps = mlp_config["iteration_steps"][i]
+    init_weights = mlp_config["init_weights"][i]
+    hidden_nodes = mlp_config["hidden_nodes"][i]
 
-#     print(f"------------------ Ticker: {ticker} ------------------")
+    print(f"------------------ Ticker: {ticker} ------------------")
 
-#     y_test, y_pred_test, y_out, y_pred_out = main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iteration_steps, init_weights, hidden_nodes)
+    y_test, y_pred_test, y_out, y_pred_out = main(ticker, lags_list, learning_algorithm, learning_rate, momentum, iteration_steps, init_weights, hidden_nodes)
 
-#     result_dict[ticker] = y_pred_out
-#     print(f"y_pred_out: {y_pred_out}")
-#     exit()
+    result_dict[ticker] = y_pred_out
+    # print(f"y_pred_out: {y_pred_out}")
+    # exit()
 # exit()
 # # ----- Test Statistique -----
 # # Prédiction naïve = lag 1 (car on prédit t+1 à partir de t)
