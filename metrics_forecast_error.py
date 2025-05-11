@@ -15,7 +15,7 @@ def root_mean_squared_error(y_true, y_pred):
 
 # Fonction THEIL-U
 def theil_u_statistic(y_true, y_pred):
-    # Theil U-statistic
-    numerator = np.mean(np.abs(y_true - y_pred))
-    denominator = np.mean(np.abs(y_true))
-    return numerator / denominator
+    rmse = np.sqrt(np.mean((y_true - y_pred) ** 2))
+    rmse_pred = np.sqrt(np.mean(y_pred ** 2))
+    rmse_true = np.sqrt(np.mean(y_true ** 2))
+    return rmse / (rmse_pred + rmse_true)
