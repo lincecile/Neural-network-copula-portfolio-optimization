@@ -5,229 +5,143 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 import sys
 import os
 import warnings
-import time
-from datetime import timedelta
+import pickle
 
-# Suppress convergence warnings
-warnings.filterwarnings("ignore", category=UserWarning)
-warnings.filterwarnings("ignore", category=FutureWarning)
-warnings.filterwarnings("ignore", category=RuntimeWarning)
+# Suppress warnings
+warnings.filterwarnings("ignore")
 
-# Add parent directory to path to import clean_df_paper
+# Import data
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from clean_df_paper import df_test_set_daily, df_training_set_daily, df_out_sample_set_daily
 
-from clean_df_paper import df_test_set_daily, df_training_set_daily
-
-def arma_model(series, order):
-    """
-    Create an ARMA model from the given Series
-    """
-    model = ARIMA(series, order=(order[0], 0, order[1]))
-    fitted_model = model.fit()
-    return fitted_model
-
-def calculate_mape_corrected(y_true, y_pred):
-    """
-    Calculate MAPE in a way more consistent with the paper.
-    """
-    # Convert to numpy arrays
-    y_true = np.array(y_true)
-    y_pred = np.array(y_pred)
+class ARMAForecastModel:
+    def __init__(self):
+        # Configuration as per paper
+        self.tickers = ["SPY US Equity", "DIA US Equity", "QQQ US Equity"]
+        self.orders = [(8, 8), (10, 10), (7, 7)]  # Paper's ARMA orders
+        self.predictions = {}
     
-    # Calculate absolute percentage errors
-    non_zero_indices = np.abs(y_true) > 1e-10
-    if not np.any(non_zero_indices):
-        return float('inf')
+    def fit_arma_model(self, series, order):
+        """Fit ARMA model une seule fois"""
+        model = ARIMA(series, order=(order[0], 0, order[1]))
+        fitted_model = model.fit()
+        return fitted_model
     
-    # Filter out zero or near-zero values
-    filtered_y_true = y_true[non_zero_indices]
-    filtered_y_pred = y_pred[non_zero_indices]
-    
-    # Calculate percentage errors
-    percentage_errors = np.abs((filtered_y_true - filtered_y_pred) / filtered_y_true) * 100
-    
-    # Return mean
-    return np.mean(percentage_errors)
-
-def calculate_theils_u(y_true, y_pred):
-    """
-    Calculate Theil's U as per the paper
-    """
-    y_true = np.array(y_true)
-    y_pred = np.array(y_pred)
-    
-    # Calculate RMSE
-    rmse = np.sqrt(np.mean(np.square(y_pred - y_true)))
-    
-    # Calculate denominators for Theil's U
-    rmse_pred = np.sqrt(np.mean(np.square(y_pred)))
-    rmse_true = np.sqrt(np.mean(np.square(y_true)))
-    
-    # Calculate Theil's U
-    denominator = rmse_pred + rmse_true
-    if denominator > 0:
-        return rmse / denominator
-    else:
-        return np.nan
-
-def one_step_ahead_forecast(train_data, test_data, order, update_frequency=5):
-    """
-    Perform one-step-ahead forecasting using an ARMA model.
-    
-    Parameters:
-    -----------
-    train_data : pandas.Series
-        The training data series
-    test_data : pandas.Series
-        The test data series
-    order : tuple
-        The order of the ARMA model (p, q)
-    update_frequency : int
-        How often to re-estimate the model (e.g., 5 means re-estimate every 5 days)
+    def calculate_metrics(self, y_true, y_pred):
+        """Calculate all metrics as per paper"""
+        mae = mean_absolute_error(y_true, y_pred)
+        rmse = np.sqrt(mean_squared_error(y_true, y_pred))
         
-    Returns:
-    --------
-    numpy.ndarray
-        The one-step-ahead predictions
-    """
-    predictions = []
-    test_len = len(test_data)
-    
-    # Initialize first model with training data
-    history = train_data.copy()
-    model = arma_model(history, order=order)
-    
-    # Set up progress display
-    print(f"    Starting one-step-ahead forecasting for {test_len} steps...")
-    start_time = time.time()
-    
-    for i in range(test_len):
-        # Predict one step ahead
-        forecast = model.forecast(steps=1)
-        next_pred = forecast.iloc[0]
-        predictions.append(next_pred)
+        # MAPE calculation
+        non_zero_mask = np.abs(y_true) > 1e-10
+        if np.any(non_zero_mask):
+            mape = np.mean(np.abs((y_true[non_zero_mask] - y_pred[non_zero_mask]) / y_true[non_zero_mask])) * 100
+        else:
+            mape = np.inf
         
-        # Update history with actual value
-        history_idx = train_data.index.tolist() + test_data.index.tolist()[:i+1]
-        history_values = train_data.values.tolist() + test_data.values.tolist()[:i+1]
-        history = pd.Series(history_values, index=history_idx)
+        # Theil's U calculation
+        rmse_pred = np.sqrt(np.mean(y_pred**2))
+        rmse_true = np.sqrt(np.mean(y_true**2))
+        theil_u = rmse / (rmse_pred + rmse_true) if (rmse_pred + rmse_true) > 0 else np.nan
         
-        # Re-estimate model every update_frequency steps or on last step
-        if (i + 1) % update_frequency == 0 or i == test_len - 1:
-            model = arma_model(history, order=order)
+        return {'MAE': mae, 'MAPE': mape, 'RMSE': rmse, 'Theil_U': theil_u}
+    
+    def one_step_ahead_forecast_like_rnn(self, model, start_data, test_data):
+        """One-step-ahead comme RNN : modèle entraîné une fois, prédictions séquentielles"""
+        predictions = []
+        current_series = start_data.copy()
         
-        # Show progress
-        if (i + 1) % 50 == 0:
-            elapsed = time.time() - start_time
-            avg_time_per_step = elapsed / (i + 1)
-            remaining_steps = test_len - (i + 1)
-            est_remaining_time = remaining_steps * avg_time_per_step
-            print(f"    Progress: {i+1}/{test_len} steps ({(i+1)/test_len*100:.1f}%) - "
-                  f"Elapsed: {timedelta(seconds=int(elapsed))}, "
-                  f"Est. remaining: {timedelta(seconds=int(est_remaining_time))}")
-    
-    # Show final timing
-    total_time = time.time() - start_time
-    print(f"    Completed in {timedelta(seconds=int(total_time))}")
-    
-    return np.array(predictions)
-
-def main():
-    """
-    Main function to test ARMA models on different ETFs
-    """
-    np.random.seed(42)
-    etfs = df_training_set_daily.columns
-    
-    # Use copies of the dataframes
-    df_train = df_training_set_daily.copy()
-    df_test = df_test_set_daily.copy()
-
-    # Define orders for each ETF as per the paper
-    etf_orders = {
-        'SPY US Equity': (8, 8),
-        'DIA US Equity': (10, 10),
-        'QQQ US Equity': (7, 7)
-    }
-    
-    # Display basic dataset info
-    print("Training data shape:", df_train.shape)
-    print("Test data shape:", df_test.shape)
-    
-    # One-step ahead forecasting with model updates every 5 days
-    print("\nOne-Step-Ahead ARMA Forecasting Results:")
-    print("=" * 60)
-    
-    for etf in etfs:
-        print(f"\nETF: {etf}")
-        order = etf_orders.get(etf, (8, 8))
-        print(f"  Using order: {order}")
+        for i in range(len(test_data)):
+            # Get forecast and extract the value properly
+            forecast = model.forecast(steps=1)
+            pred = forecast.iloc[0] if isinstance(forecast, pd.Series) else forecast[0]
+            predictions.append(pred)
+            
+            # Add actual value to history with proper index
+            new_point = pd.Series([test_data.iloc[i]], index=[test_data.index[i]])
+            current_series = pd.concat([current_series, new_point])
+            
+            # Update model with new data
+            model = model.apply(current_series)
+            
+            # Progress reporting
+            if (i + 1) % 50 == 0:
+                print(f"    Progress: {i+1}/{len(test_data)}")
         
-        try:
-            # Perform one-step-ahead forecasting with model update every 5 days
-            predictions = one_step_ahead_forecast(
-                df_train[etf], 
-                df_test[etf], 
-                order=order,
-                update_frequency=5  # Re-estimate model every 5 days for speed
-            )
+        return np.array(predictions)
+    
+    def fit_all_models(self):
+        """Fit models for all tickers, like RNN approach"""
+        for i, ticker in enumerate(self.tickers):
+            order = self.orders[i]
+            print(f"\n=== {ticker} ===")
+            print(f"Using ARMA{order}")
+            
+            # Get data
+            train = df_training_set_daily[ticker]
+            test = df_test_set_daily[ticker]
+            out_sample = df_out_sample_set_daily[ticker]
+            
+            # Entraîne UNE FOIS sur les données train+test
+            combined_train = pd.concat([train, test])
+            print("Training model once...")
+            model = self.fit_arma_model(combined_train, order)
+            
+            # Out-of-sample predictions (comme ton RNN)
+            print("Making out-of-sample predictions...")
+            y_pred_out = self.one_step_ahead_forecast_like_rnn(model, combined_train, out_sample)
+            y_true_out = out_sample.values
             
             # Calculate metrics
-            y_true = df_test[etf].values
-            y_pred = predictions
+            metrics = self.calculate_metrics(y_true_out, y_pred_out)
             
-            mae = mean_absolute_error(y_true, y_pred)
-            mape = calculate_mape_corrected(y_true, y_pred)
-            rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-            theils_u = calculate_theils_u(y_true, y_pred)
+            # Store results
+            self.predictions[ticker] = {
+                'predictions': y_pred_out,
+                'actuals': y_true_out,
+                'metrics': metrics
+            }
             
-            print(f"    MAE: {mae:.4f}")
-            print(f"    MAPE: {mape:.2f}%")
-            print(f"    RMSE: {rmse:.4f}")
-            print(f"    Theil's U: {theils_u:.4f}")
+            # Print results
+            print("Out-of-sample metrics:")
+            print(f"  MAE: {metrics['MAE']:.4f}")
+            print(f"  MAPE: {metrics['MAPE']:.2f}%")
+            print(f"  RMSE: {metrics['RMSE']:.4f}")
+            print(f"  Theil's U: {metrics['Theil_U']:.4f}")
             
-            # Print first few predictions vs actual
-            print("\n    First 5 predictions vs actual:")
-            for i in range(min(5, len(y_true))):
-                print(f"    Day {i+1}: Pred = {y_pred[i]:.6f}, Actual = {y_true[i]:.6f}")
-                
-        except Exception as e:
-            print(f"    Error fitting model: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            
-    # For comparison: standard forecasting method
-    print("\n\nStandard ARMA Forecasting Results (for comparison):")
-    print("=" * 60)
+            # Show first predictions
+            print("First 5 predictions:")
+            for j in range(min(5, len(y_pred_out))):
+                print(f"  Day {j+1}: Pred={y_pred_out[j]:.6f}, Actual={y_true_out[j]:.6f}")
     
-    for etf in etfs:
-        print(f"\nETF: {etf}")
-        order = etf_orders.get(etf, (8, 8))
-        print(f"  Using order: {order}")
+    def save_results(self):
+        """Save results for DCC"""
+        # Save pickle
+        with open('arma_results.pkl', 'wb') as f:
+            pickle.dump(self.predictions, f)
         
-        try:
-            # Fit model on entire training set once
-            model = arma_model(df_train[etf], order=order)
-            
-            # Make forecasts for all test period at once
-            predictions = model.forecast(steps=len(df_test))
-            
-            # Calculate metrics
-            y_true = df_test[etf].values
-            y_pred = predictions.values
-                
-            mae = mean_absolute_error(y_true, y_pred)
-            mape = calculate_mape_corrected(y_true, y_pred)
-            rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-            theils_u = calculate_theils_u(y_true, y_pred)
-            
-            print(f"    MAE: {mae:.4f}")
-            print(f"    MAPE: {mape:.2f}%")
-            print(f"    RMSE: {rmse:.4f}")
-            print(f"    Theil's U: {theils_u:.4f}")
-            
-        except Exception as e:
-            print(f"    Error fitting model: {str(e)}")
-            
+        # Save CSV
+        returns_df = {}
+        for ticker in self.tickers:
+            if ticker in self.predictions:
+                pred = self.predictions[ticker]['predictions']
+                index = df_out_sample_set_daily[ticker].index[-len(pred):]
+                returns_df[ticker] = pd.Series(pred, index=index)
+        
+        df = pd.DataFrame(returns_df)
+        #df.to_csv('arma_returns_out_sample.csv')
+        
+        # Save metrics
+        metrics_df = pd.DataFrame({
+            ticker: data['metrics'] 
+            for ticker, data in self.predictions.items()
+        }).T
+        #metrics_df.to_csv('arma_metrics.csv')
+        
+
+
 if __name__ == "__main__":
-    main()
+    # Run ARMA forecasting
+    arma_model = ARMAForecastModel()
+    arma_model.fit_all_models()
+    arma_model.save_results()
