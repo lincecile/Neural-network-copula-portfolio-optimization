@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 import json
 import typing as tp
 import pandas as pd
-import numpy as np
 from sklearn.preprocessing import StandardScaler
 import torch
 
@@ -39,13 +38,15 @@ def create_lag_features(df: pd.DataFrame, target_col: str, lags: list) -> pd.Dat
 
 #%% class
 
-class NnForecaster(ABC):
+class NnForecaster(ABC, torch.nn.Module):
     """
-    Abstract base class for forecasting models.
+    Abstract base class for forecasting models usin neural networks.
     """
     def __init__ (self, df_train : pd.DataFrame, df_test : pd.DataFrame, 
                   df_out : pd.DataFrame, ticker : Ticker, model : NnModel, 
                   hardcoded : bool = True):
+        
+        super(NnForecaster, self).__init__()
         
         self.ticker = ticker
         self.model = model
@@ -55,9 +56,6 @@ class NnForecaster(ABC):
         self.train = df_train
         self.test = df_test
         self.out = df_out
-                
-        self.input_combination = None
-        self.hidden_function = None
         
         param = self.__get_parameters()
         self.learning_algorithm = param["Learning algorithm"]
@@ -109,8 +107,6 @@ class NnForecaster(ABC):
         if self.to_be_trained:
             self.__optimize_param()
             pass
-        
-    
         
     def __get_parameters(self) -> tp.Dict[str, tp.Any]:
         """
