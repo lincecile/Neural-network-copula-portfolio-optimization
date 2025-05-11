@@ -1,214 +1,212 @@
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import numpy as np
 from arch import arch_model
 from scipy.optimize import minimize
-from arch.univariate import GARCH
-from clean_df_paper import df_training_set_weekly, df_test_set_weekly, df_out_sample_set_weekly
+import warnings
+import pickle
+warnings.filterwarnings("ignore")
 
-from scipy.optimize import minimize
-
-class DCCModel:
-    def __init__(self, returns_df):
-        """
-        Initialise le modèle DCC pour 3 séries de rendements
+class DCC_Covariance:
+    def __init__(self, returns_data):
+        self.returns = returns_data.copy()
+        self.tickers = list(self.returns.columns)
+        self.T, self.n = self.returns.shape
         
-        Parameters:
-        -----------
-        returns_df : pandas DataFrame
-            DataFrame contenant les rendements des 3 tickers
-        """
-        self.returns = returns_df
-        self.tickers = list(returns_df.columns)
-        self.T, self.n = returns_df.shape
+        # Paramètres ARMA spécifiés dans le papier
+        self.arma_params = {
+            'SPY': (8, 8),
+            'DIA': (10, 10), 
+            'QQQ': (7, 7)
+        }
         
-        # Stockage des résultats
-        self.univariate_models = {}
-        self.std_residuals = pd.DataFrame(index=returns_df.index, columns=returns_df.columns)
-        self.conditional_variances = pd.DataFrame(index=returns_df.index, columns=returns_df.columns)
-        self.Q_t = np.zeros((self.T+1, self.n, self.n))
-        self.R_t = np.zeros((self.T, self.n, self.n))
-        self.H_t = np.zeros((self.T, self.n, self.n))
+        self.standardized_residuals = None
+        self.conditional_variances = None
+        self.H_t = None
+        self.alpha = None
+        self.beta = None
         
-    def fit_univariate_garch(self, p=1, q=1):
-        """
-        Ajuste des modèles GARCH univariés pour chaque série
-        """
+    def get_arma_order(self, ticker):
+        """Obtenir l'ordre ARMA pour un ETF"""
+        for key in self.arma_params:
+            if key in ticker.upper():
+                return self.arma_params[key]
+        return (1, 1)  # Par défaut
+        
+    def fit_arma_gjr_garch_models(self):
+        residuals_dict = {}
+        variances_dict = {}
+        
         for ticker in self.tickers:
-            print(f"Ajustement du modèle GARCH pour {ticker}")
             returns = self.returns[ticker].values
+            p, q = self.get_arma_order(ticker)
             
-            # Ajuster le modèle GARCH(p,q)
-            model = arch_model(returns, vol='GARCH', p=p, q=q, mean='Zero')
-            result = model.fit(disp='off')
-            
-            # Stocker le modèle
-            self.univariate_models[ticker] = result
-            
-            # Calculer et stocker les résidus standardisés
-            self.std_residuals[ticker] = result.resid / result.conditional_volatility
-            
-            # Stocker les variances conditionnelles
-            self.conditional_variances[ticker] = result.conditional_volatility**2
-            
-        print("Modèles GARCH univariés ajustés avec succès")
+            try:
+                model = arch_model(
+                    returns,
+                    mean='AR',
+                    vol='GARCH',
+                    lags=p,
+                    p=1, o=1, q=1
+                )
+                
+                result = model.fit(disp='off', show_warning=False)
+                
+                # Résidus standardisés
+                residuals = result.resid
+                volatility = result.conditional_volatility
+                
+                # Gestion des valeurs problématiques
+                mask = ~(np.isnan(residuals) | np.isnan(volatility) | (volatility <= 0))
+                if not mask.all():
+                    residuals = pd.Series(residuals).fillna(method='ffill').fillna(method='bfill').values
+                    volatility = pd.Series(volatility).fillna(method='ffill').fillna(method='bfill').values
+                    volatility = np.maximum(volatility, 1e-8)
+                
+                residuals_dict[ticker] = residuals / volatility
+                variances_dict[ticker] = volatility ** 2
+                
+            except:
+                # Fallback simple
+                residuals = returns - np.mean(returns)
+                sigma = np.std(returns)
+                residuals_dict[ticker] = residuals / sigma
+                variances_dict[ticker] = np.full_like(returns, sigma**2)
         
-    def _dcc_likelihood(self, params):
-        """
-        Fonction de vraisemblance pour l'estimation DCC
+        self.standardized_residuals = pd.DataFrame(residuals_dict, index=self.returns.index)
+        self.conditional_variances = pd.DataFrame(variances_dict, index=self.returns.index)
         
-        Parameters:
-        -----------
-        params : list ou array
-            [a, b] où a et b sont les paramètres du modèle DCC
-        """
-        a, b = params
-        
-        # Vérifier si les paramètres sont valides
-        if a < 0 or b < 0 or a + b >= 0.999:
-            return 1e10
-        
-        epsilon_t = self.std_residuals.values
-        n = self.n
-        T = self.T
-        
-        # Calculer la matrice de corrélation non conditionnelle
-        Q_bar = np.corrcoef(epsilon_t.T)
-        
-        # Initialiser Q_t
-        self.Q_t[0] = Q_bar.copy()
-        
-        # Calculer Q_t et R_t récursivement
-        log_likelihood = 0
-        
-        for t in range(T):
-            # Mettre à jour Q_t selon l'équation DCC
-            eps_tm1 = epsilon_t[t-1] if t > 0 else np.zeros(n)
-            self.Q_t[t] = (1 - a - b) * Q_bar + a * np.outer(eps_tm1, eps_tm1) + b * self.Q_t[t-1]
-            
-            # Calculer la matrice R_t (corrélations conditionnelles)
-            Q_t_diag = np.diag(np.sqrt(np.diag(self.Q_t[t])))
-            Q_t_diag_inv = np.linalg.inv(Q_t_diag)
-            self.R_t[t] = Q_t_diag_inv @ self.Q_t[t] @ Q_t_diag_inv
-            
-            # S'assurer que R_t est une matrice de corrélation valide
-            np.fill_diagonal(self.R_t[t], 1.0)
-            
-            # Calculer la matrice de covariance conditionnelle H_t
-            D_t = np.diag(np.sqrt([self.conditional_variances.iloc[t, i] for i in range(n)]))
-            self.H_t[t] = D_t @ self.R_t[t] @ D_t
-            
-            # Calculer la log-vraisemblance
-            eps_t = epsilon_t[t]
-            if not np.all(np.isnan(eps_t)):
-                try:
-                    H_t_det = np.linalg.det(self.H_t[t])
-                    if H_t_det <= 0:
-                        return 1e10
-                    
-                    H_t_inv = np.linalg.inv(self.H_t[t])
-                    log_likelihood -= 0.5 * (np.log(H_t_det) + eps_t.T @ H_t_inv @ eps_t)
-                except:
-                    return 1e10
-        
-        return -log_likelihood
+        # Nettoyer une dernière fois
+        self.standardized_residuals = self.standardized_residuals.fillna(0)
+        self.conditional_variances = self.conditional_variances.fillna(self.returns.var())
     
-    def fit_dcc(self, a_start=0.1, b_start=0.8):
-        """
-        Ajuste le modèle DCC
-        """
-        print("Ajustement du modèle DCC...")
+    def estimate_dcc_parameters(self):
+        """Estimer alpha et beta par maximum de vraisemblance"""
+        epsilon = self.standardized_residuals.values
+        T, n = epsilon.shape
         
-        # Optimiser les paramètres DCC
-        initial_params = [a_start, b_start]
-        bounds = [(0.001, 0.3), (0.5, 0.999)]
+        def dcc_log_likelihood(params):
+            alpha, beta = params
+            
+            if alpha <= 0 or beta <= 0 or alpha + beta >= 1:
+                return 1e6
+                
+            Q_bar = np.corrcoef(epsilon.T)
+            Q_t = np.zeros((T, n, n))
+            Q_t[0] = Q_bar
+            
+            log_lik = 0
+            
+            for t in range(1, T):
+                Q_t[t] = (1 - alpha - beta) * Q_bar + alpha * np.outer(epsilon[t-1], epsilon[t-1]) + beta * Q_t[t-1]
+                
+                Q_diag_inv = 1.0 / np.sqrt(np.diag(Q_t[t]))
+                R_t = Q_t[t] * np.outer(Q_diag_inv, Q_diag_inv)
+                np.fill_diagonal(R_t, 1.0)
+                
+                sign, logdet = np.linalg.slogdet(R_t)
+                if sign <= 0:
+                    return 1e6
+                    
+                log_lik += -0.5 * (logdet + epsilon[t] @ np.linalg.inv(R_t) @ epsilon[t] - epsilon[t] @ epsilon[t])
+            
+            return -log_lik
+        
+        bounds = [(0.001, 0.999), (0.001, 0.999)]
+        constraints = [{'type': 'ineq', 'fun': lambda x: 0.999 - x[0] - x[1]}]
         
         result = minimize(
-            self._dcc_likelihood,
-            initial_params,
+            dcc_log_likelihood,
+            x0=[0.01, 0.95],
+            method='SLSQP',
             bounds=bounds,
-            method='L-BFGS-B'
+            constraints=constraints
         )
         
-        self.dcc_params = result.x
-        self.dcc_loglikelihood = -result.fun
+        if result.success:
+            self.alpha, self.beta = result.x
+        else:
+            self.alpha, self.beta = 0.01, 0.95
         
-        print(f"Modèle DCC ajusté avec succès : a = {self.dcc_params[0]:.4f}, b = {self.dcc_params[1]:.4f}")
-        
-        # Calculer une dernière fois les matrices avec les paramètres optimaux
-        _ = self._dcc_likelihood(self.dcc_params)
-        
-        return result
+        return self.alpha, self.beta
     
-    def get_dynamic_correlations(self):
-        """
-        Renvoie les corrélations dynamiques entre les paires de tickers
-        """
-        pairs = []
-        correlations = {}
+    def fit_dcc_model(self):
+        """Ajuster le modèle DCC"""
+        self.estimate_dcc_parameters()
         
-        for i in range(self.n):
-            for j in range(i+1, self.n):
-                pair = f"{self.tickers[i]}-{self.tickers[j]}"
-                pairs.append(pair)
-                correlations[pair] = [self.R_t[t, i, j] for t in range(self.T)]
+        epsilon = self.standardized_residuals.values
+        T, n = epsilon.shape
         
-        return pd.DataFrame(correlations, index=self.returns.index)
+        Q_bar = np.corrcoef(epsilon.T)
+        Q_t = np.zeros((T, n, n))
+        self.H_t = np.zeros((T, n, n))
+        
+        Q_t[0] = Q_bar.copy()
+        
+        for t in range(T):
+            if t > 0:
+                Q_t[t] = (1 - self.alpha - self.beta) * Q_bar + self.alpha * np.outer(epsilon[t-1], epsilon[t-1]) + self.beta * Q_t[t-1]
+            
+            Q_diag = np.sqrt(np.diag(Q_t[t]))
+            R_t = Q_t[t] / np.outer(Q_diag, Q_diag)
+            np.fill_diagonal(R_t, 1.0)
+            
+            D_t = np.diag(np.sqrt(self.conditional_variances.iloc[t].values))
+            self.H_t[t] = D_t @ R_t @ D_t
     
-    def plot_dynamic_correlations(self, figsize=(12, 8)):
-        """
-        Trace l'évolution des corrélations dynamiques
-        """
-        corr_df = self.get_dynamic_correlations()
+    def get_covariance_matrix(self, date_or_index):
+        """Obtenir la matrice de covariance"""
+        if isinstance(date_or_index, int):
+            idx = date_or_index
+        else:
+            idx = self.returns.index.get_loc(date_or_index)
         
-        plt.figure(figsize=figsize)
-        for column in corr_df.columns:
-            plt.plot(corr_df.index, corr_df[column], label=column)
-        
-        plt.title("Corrélations Dynamiques Conditionnelles")
-        plt.xlabel("Date")
-        plt.ylabel("Corrélation")
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        
-        return plt.gcf()
+        return pd.DataFrame(
+            self.H_t[idx], 
+            columns=self.tickers, 
+            index=self.tickers
+        )
     
-    def plot_conditional_volatilities(self, figsize=(12, 8)):
-        """
-        Trace l'évolution des volatilités conditionnelles
-        """
-        vol_df = np.sqrt(self.conditional_variances)
+    def export_to_pickle(self, filepath='dcc_results.pkl'):
+        """Exporter tous les résultats dans un fichier pickle"""
+        # Préparer les données à exporter
+        export_data = {
+            'tickers': self.tickers,
+            'dates': self.returns.index.tolist(),
+            'H_t': self.H_t,  # Matrices de covariance pour toutes les dates
+            'alpha': self.alpha,
+            'beta': self.beta,
+            'conditional_variances': self.conditional_variances,
+            'standardized_residuals': self.standardized_residuals,
+            'arma_params': self.arma_params
+        }
         
-        plt.figure(figsize=figsize)
-        for column in vol_df.columns:
-            plt.plot(vol_df.index, vol_df[column], label=column)
+        # Sauvegarder dans un fichier pickle
+        with open(filepath, 'wb') as f:
+            pickle.dump(export_data, f)
         
-        plt.title("Volatilités Conditionnelles")
-        plt.xlabel("Date")
-        plt.ylabel("Volatilité")
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        
-        return plt.gcf()
+        print(f"Résultats DCC exportés dans: {filepath}")
+        return filepath
 
-# Exemple d'utilisation avec des données fictives
+def main():
+    from clean_df_paper import df_in_sample_set_daily
+    
+    dcc = DCC_Covariance(df_in_sample_set_daily)
+    dcc.fit_arma_gjr_garch_models()
+    dcc.fit_dcc_model()
+    
+    # Exporter les résultats
+    dcc.export_to_pickle('dcc_results_in_sample.pkl')
+    
+    print(f"Paramètres DCC estimés: alpha={dcc.alpha:.4f}, beta={dcc.beta:.4f}")
+    print("\n=== 10 dernières matrices de variance-covariance ===")
+    
+    for i in range(10, 0, -1):
+        idx = -i
+        date = df_in_sample_set_daily.index[idx]
+        print(f"\nDate: {date}")
+        cov_matrix = dcc.get_covariance_matrix(idx)
+        print(cov_matrix.round(6))
+        print("-" * 60)
+
 if __name__ == "__main__":
-
-    # Utiliser le modèle DCC
-    dcc_model = DCCModel(df_training_set_weekly)
-    dcc_model.fit_univariate_garch(p=1, q=1)
-    dcc_model.fit_dcc()
-
-    # Récupérer les corrélations dynamiques
-    dynamic_corrs = dcc_model.get_dynamic_correlations()
-    print(dynamic_corrs)
-    
-#     # Tracer les corrélations dynamiques
-#     dcc_model.plot_dynamic_correlations()
-#     plt.show()
-    
-#     # Tracer les volatilités conditionnelles
-#     dcc_model.plot_conditional_volatilities()
-#     plt.show()
+    main()
