@@ -1,5 +1,4 @@
-{
-  "SPY US Equity": {
+{  "SPY US Equity": {
     "MLP": {
       "Learning algorithm": "Gradient descent",
       "Learning rate": 0.003,
@@ -28,7 +27,7 @@
       "Momentum": 0.5,
       "Iteration steps": 40000,
       "Initialisation of weights": "N(0,1)",
-      "Input nodes": 7,
+      "Input nodes": 9,
       "Hidden nodes": 5,
       "Output node": 1,
       "Input lags": [1, 4, 5, 6, 7, 9, 10, 11, 12]

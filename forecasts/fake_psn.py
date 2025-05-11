@@ -1,98 +1,72 @@
-# %% Imports
+# filepath: c:\Users\Enzo\OneDrive\Obsidian\Enzo\Cours\s2\Outils quantitatifs\Neural-network-copula-portfolio-optimization\forecasts\fake_psn.py
+#%% imports
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
+
+
+from .forecaster import NnForecaster
+from .nn_model_dataclass import NnModel
 import pandas as pd
-from sklearn.metrics import mean_absolute_error, mean_squared_error
-from forecasts.forecaster import NnForecaster
-from ticker_dataclass import Ticker
-from forecasts.nn_model_dataclass import NnModel
-from clean_df_paper import df_training_set_daily, df_test_set_daily, df_out_sample_set_daily
-import os
-import pickle
 
-# %% RNN Forecaster Class
-class RNNForecaster(NnForecaster):
-    def __init__(self, df_train: pd.DataFrame, df_test: pd.DataFrame, 
-                 df_out: pd.DataFrame, ticker: str, hardcoded: bool = True):
-        # Call parent constructor
-        super().__init__(df_train=df_train, 
-                        df_test=df_test, 
-                        df_out=df_out, 
-                        ticker=ticker, 
-                        model=NnModel.rnn, 
-                        hardcoded=hardcoded)
-        
-        # Update input_nodes to match actual input size
-        self.input_nodes = self.x_train_tensor.size(1)
-        
-        self.build_model()
+#%% class
+
+class FakePsnForecaster(NnForecaster):
+    """This class implements the fake Pi-Sigma Network model for forecasting as described in the paper."""
     
-    def build_model(self):
-        """Build the RNN model"""
-        # Print input size for debugging
+    def __init__(self, df_train, df_test, df_out, ticker, hardcoded=True):
+        model = NnModel.psn
+        super(FakePsnForecaster, self).__init__(df_train, df_test, df_out, ticker, model, hardcoded)
         
-        # RNN with custom parameters
-        self.rnn = nn.RNN(
-            input_size=self.input_nodes,
-            hidden_size=self.hidden_nodes,
-            num_layers=1,
-            batch_first=True,
-            nonlinearity='relu'
-        )
+        # Create a proper Pi-Sigma Network architecture
+        # Input-to-hidden layer (fully connected)
+        self.input_layer = nn.Linear(self.input_nodes, self.hidden_nodes)
         
-        self.output_layer = nn.Linear(self.hidden_nodes, self.output_node)
-        self.init_weights()
+        # Hidden-to-output layer with learnable weights (product units)
+        self.sigma_layer = nn.Linear(self.hidden_nodes, 1, bias=True)
         
-        # Setup optimizer
-        self.optimizer = optim.SGD(
-            list(self.rnn.parameters()) + list(self.output_layer.parameters()),
-            lr=self.learning_rate,
-            momentum=self.momentum
-        )
-        self.loss_fn = nn.MSELoss()
-    
+        # Scaling factor (learnable)
+        self.c = nn.Parameter(torch.tensor(1.0))
+        
+        # Hidden layer activation function
+        self.hidden_activation = nn.Tanh()
+        
     def init_weights(self):
-        """Initialize weights with N(0, 1) and biases with 0"""
-        # RNN weights - according to the N(0,1) parameter
-        for name, param in self.rnn.named_parameters():
-            if 'weight' in name:
-                nn.init.normal_(param, mean=0.0, std=1.0)
-            elif 'bias' in name:
-                nn.init.constant_(param, 0.0)
+        """Initialise the weights of the input layer"""
+        if self.initialisation_of_weights == "N(0,1)":
+            self.input_layer.weight.data.normal_(0, 1)  # Initialize input layer weights
+            self.sigma_layer.weight.data.normal_(0, 1)  # Initialize sigma layer weights
+        else:
+            raise ValueError("Initialisation of weights not implemented")
         
-        # Output layer weights
-        nn.init.normal_(self.output_layer.weight, mean=0.0, std=1.0)
-        nn.init.constant_(self.output_layer.bias, 0.0)
-    
     def forward(self, x):
-        """Forward pass for one-step ahead prediction"""
-        batch_size = x.size(0)
+        """
+        Performs a forward pass through the network.
+        This is a proper implementation of a Pi-Sigma Network, which:
+        1. Applies the input-to-hidden layer weights
+        2. Applies an activation function to the hidden units
+        3. Computes a weighted sum of the hidden activations
+        4. Applies a final scaling factor
         
-        # Debug: verify dimensionality
+        Parameters:
+            x (torch.Tensor): The input tensor to the network.
+        Returns:
+            torch.Tensor: The output tensor after applying the forward computations.
+        """
+        # Input to hidden layer
+        z = self.input_layer(x)
         
-        # Ensure correct dimensions
-        if x.size(-1) != self.input_nodes:
-            if x.size(-1) > self.input_nodes:
-                x = x[..., :self.input_nodes]
-            else:
-                raise ValueError(f"Input has too few features: got {x.size(-1)}, need {self.input_nodes}")
+        # Apply activation function
+        h = self.hidden_activation(z)
         
-        if x.dtype != torch.float32:
-            x = x.float()
+        # Apply sigma layer (weighted sum)
+        out = self.sigma_layer(h)
         
-        # Reshape for RNN
-        x_reshaped = x.view(batch_size, 1, self.input_nodes)
+        # Scale output (similar to the paper's implementation)
+        out = out * self.c
         
-        # Initialize hidden state
-        h_0 = torch.zeros(1, batch_size, self.hidden_nodes, dtype=torch.float32)
-          # Forward pass
-        out, _ = self.rnn(x_reshaped, h_0)
-        output = out[:, -1, :]
-        prediction = self.output_layer(output)
-
-        return prediction
+        return out
         
     def train_model(self):
         """
@@ -112,23 +86,20 @@ class RNNForecaster(NnForecaster):
             List of loss values throughout training for monitoring purposes.
         """
         # Set model to training mode
-        self.train_mode = True
+        self.train()
         
         # Initialize optimizer according to learning algorithm
         if self.learning_algorithm == "Gradient descent":
-            # Use the optimizer created during initialization if it exists
-            if not hasattr(self, 'optimizer'):
-                self.optimizer = optim.SGD(
-                    self.parameters(),
-                    lr=self.learning_rate,
-                    momentum=self.momentum
-                )
+            optimizer = optim.SGD(
+                self.parameters(),
+                lr=self.learning_rate,
+                momentum=self.momentum
+            )
         else:
             raise ValueError(f"Learning algorithm {self.learning_algorithm} not implemented")
             
-        # Define loss function if not already defined
-        if not hasattr(self, 'loss_fn'):
-            self.loss_fn = nn.MSELoss()
+        # Define loss function - MSE is standard for regression problems
+        loss_fn = nn.MSELoss()
         
         # Make sure input tensors are float32 for better numerical stability
         x_train = self.x_train_tensor.float()
@@ -140,17 +111,17 @@ class RNNForecaster(NnForecaster):
         # Training loop
         for iteration in range(self.iteration_steps):
             # Zero gradients
-            self.optimizer.zero_grad()
+            optimizer.zero_grad()
             
             # Forward pass
             y_pred = self(x_train)
             
             # Compute loss
-            loss = self.loss_fn(y_pred, y_train)
+            loss = loss_fn(y_pred, y_train)
             
             # Backward pass and optimize
             loss.backward()
-            self.optimizer.step()
+            optimizer.step()
             
             # Store loss
             losses.append(loss.item())
@@ -194,7 +165,8 @@ class RNNForecaster(NnForecaster):
         # Inverse transform predictions and actual values
         y_pred_original = self.y_scaler.inverse_transform(y_pred_np)
         y_true_original = self.y_scaler.inverse_transform(y_true_np)
-          # Calculate metrics
+        
+        # Calculate metrics
         mae = mean_absolute_error(y_true_original, y_pred_original)
         rmse = np.sqrt(mean_squared_error(y_true_original, y_pred_original))
         
@@ -210,7 +182,7 @@ class RNNForecaster(NnForecaster):
         print(f"Test metrics: MAE: {mae:.4f}, MAPE: {mape:.4f}%, RMSE: {rmse:.4f}, Theil's U: {theilu:.4f}")
         
         return mae, mape, rmse, theilu, y_pred_original
-        
+    
     def predict(self, x=None):
         """
         Predict the output for the given input or out-of-sample set.
