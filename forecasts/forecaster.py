@@ -118,7 +118,8 @@ class NnForecaster(ABC):
         """
         if self.hardcoded:
             # Load parameters from a hardcoded file
-            param = json.load(open("param.json"))[self.ticker][self.model]
+            param = json.load(open("forecasts/param.json"))[self.ticker][self.model]
+
         else:
             # Starting guess for gradient descent (using your MLP hardcoded values)
             param = {
@@ -143,9 +144,4 @@ class NnForecaster(ABC):
     
     @abstractmethod
     def forward(self, x):
-        pass
-    
-    @abstractmethod
-    def __optimize_param(self):
-        #implement the hyperparameter optimization
         pass
