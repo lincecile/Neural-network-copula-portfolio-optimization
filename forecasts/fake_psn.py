@@ -30,7 +30,7 @@ class FakePsnForecaster(NnForecaster):
         self.c = nn.Parameter(torch.tensor(1.0))
         
         # Hidden layer activation function
-        self.hidden_activation = nn.Tanh()
+        self.hidden_activation = nn.Sigmoid()
         
     def init_weights(self):
         """Initialise the weights of the input layer"""
