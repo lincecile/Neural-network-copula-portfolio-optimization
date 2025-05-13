@@ -8,7 +8,7 @@ from datetime import timedelta
 from clean_df_paper import df_total_set_daily, df_out_sample_set_daily, df_in_sample_set_daily, df_out_sample_set_weekly
 warnings.filterwarnings("ignore")
 
-class DCC_Portfolio_Covariance:
+class DCC_Portfolio_Correlation:
     def __init__(self, all_data, in_sample_data, out_sample_data, out_sample_weekly_data):
         """
         Une classe unique pour gérer toute la pipeline DCC du papier
@@ -146,8 +146,8 @@ class DCC_Portfolio_Covariance:
         else:
             return [0.01, 0.95]
     
-    def calculate_dcc_covariance_matrix(self, standardized_residuals, conditional_variances, alpha=None, beta=None):
-        """Calculer la matrice de covariance DCC pour un ensemble de données"""
+    def calculate_dcc_correlation_matrix(self, standardized_residuals, conditional_variances, alpha=None, beta=None):
+        """Calculer la matrice de corrélation DCC pour un ensemble de données"""
         if alpha is None:
             alpha = self.alpha
         if beta is None:
@@ -158,7 +158,7 @@ class DCC_Portfolio_Covariance:
         
         Q_bar = np.corrcoef(epsilon.T)
         Q_t = np.zeros((T, n, n))
-        H_t = np.zeros((T, n, n))
+        R_t = np.zeros((T, n, n))
         
         Q_t[0] = Q_bar.copy()
         
@@ -167,13 +167,10 @@ class DCC_Portfolio_Covariance:
                 Q_t[t] = (1 - alpha - beta) * Q_bar + alpha * np.outer(epsilon[t-1], epsilon[t-1]) + beta * Q_t[t-1]
             
             Q_diag = np.sqrt(np.diag(Q_t[t]))
-            R_t = Q_t[t] / np.outer(Q_diag, Q_diag)
-            np.fill_diagonal(R_t, 1.0)
+            R_t[t] = Q_t[t] / np.outer(Q_diag, Q_diag)
+            np.fill_diagonal(R_t[t], 1.0)
             
-            D_t = np.diag(np.sqrt(conditional_variances.iloc[t].values))
-            H_t[t] = D_t @ R_t @ D_t
-        
-        return H_t
+        return R_t
     
     def fit_in_sample_dcc(self):
         """Ajuster le modèle DCC sur les données in-sample et estimer les paramètres"""
@@ -186,12 +183,12 @@ class DCC_Portfolio_Covariance:
         self.alpha, self.beta = self.estimate_dcc_parameters(residuals)
         print(f"Paramètres DCC estimés: alpha={self.alpha}, beta={self.beta}")
         
-        # Calculer les matrices de covariance
-        H_t = self.calculate_dcc_covariance_matrix(residuals, variances)
+        # Calculer les matrices de corrélation
+        R_t = self.calculate_dcc_correlation_matrix(residuals, variances)
         
         # Stocker les résultats
         self.in_sample_results = {
-            'H_t': H_t,
+            'R_t': R_t,
             'standardized_residuals': residuals,
             'conditional_variances': variances,
             'alpha': self.alpha,
@@ -201,7 +198,7 @@ class DCC_Portfolio_Covariance:
         return self.alpha, self.beta
     
     def calculate_out_sample_matrices(self):
-        """Calculer les matrices de covariance out-of-sample avec fenêtre glissante"""
+        """Calculer les matrices de corrélation out-of-sample avec fenêtre glissante"""
         print("\n=== Calcul des matrices out-of-sample ===")
         
         if self.alpha is None or self.beta is None:
@@ -230,17 +227,16 @@ class DCC_Portfolio_Covariance:
             residuals, variances = self.fit_arma_gjr_garch_models(window_data)
             
             # Calculer la matrice avec les paramètres DCC fixes
-            H_t = self.calculate_dcc_covariance_matrix(residuals, variances, self.alpha, self.beta)
+            R_t = self.calculate_dcc_correlation_matrix(residuals, variances, self.alpha, self.beta)
             
             # Stocker la dernière matrice (prévision pour target_date)
             last_matrix = pd.DataFrame(
-                H_t[-1], 
+                R_t[-1], 
                 columns=self.tickers, 
                 index=self.tickers
             )
             self.out_sample_matrices[target_date] = last_matrix
         
-        print(f"Calcul terminé: {len(self.out_sample_matrices)} matrices calculées")
     
     def extract_weekly_matrices(self):
         """Extraire les matrices pour les dates hebdomadaires"""
@@ -277,7 +273,7 @@ class DCC_Portfolio_Covariance:
         print(f"Matrices out-of-sample: {len(self.out_sample_matrices)}")
         print(f"Matrices hebdomadaires: {len(self.weekly_matrices)}")
     
-    def export_results(self, base_filename='dcc_results'):
+    def export_results(self, base_filename='dcc_correlation_results'):
             """Exporter tous les résultats avec toutes les matrices hebdomadaires"""
             # Export unique : Matrices hebdomadaires sur toute la période
             with open(f'{base_filename}_all_weekly.pkl', 'wb') as f:
@@ -292,7 +288,7 @@ class DCC_Portfolio_Covariance:
             print(f"- Toutes les matrices hebdomadaires: {base_filename}_all_weekly.pkl")
     
     def get_weekly_matrix(self, date):
-        """Obtenir une matrice de covariance pour une date hebdomadaire"""
+        """Obtenir une matrice de corrélation pour une date hebdomadaire"""
         if date not in self.weekly_matrices:
             raise ValueError(f"Matrice non disponible pour {date}")
         return self.weekly_matrices[date]
@@ -304,7 +300,7 @@ class DCC_Portfolio_Covariance:
         # In-sample
         if self.in_sample_results:
             last_in_sample_matrix = pd.DataFrame(
-                self.in_sample_results['H_t'][-1],
+                self.in_sample_results['R_t'][-1],
                 columns=self.tickers,
                 index=self.tickers
             )
@@ -326,7 +322,7 @@ class DCC_Portfolio_Covariance:
 def main():
     """Fonction principale pour exécuter la pipeline DCC"""
     # Créer l'instance unique
-    dcc_portfolio = DCC_Portfolio_Covariance(
+    dcc_portfolio = DCC_Portfolio_Correlation(
         all_data=df_total_set_daily,
         in_sample_data=df_in_sample_set_daily,
         out_sample_data=df_out_sample_set_daily,
