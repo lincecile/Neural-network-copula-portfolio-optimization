@@ -194,10 +194,11 @@ class RNNForecaster(NnForecaster):
         # Inverse transform predictions and actual values
         y_pred_original = self.y_scaler.inverse_transform(y_pred_np)
         y_true_original = self.y_scaler.inverse_transform(y_true_np)
-          # Calculate metrics
+
+        # Calculate metrics
         mae = mean_absolute_error(y_true_original, y_pred_original)
         rmse = np.sqrt(mean_squared_error(y_true_original, y_pred_original))
-        
+
         # Calculate Symmetric MAPE (sMAPE) - better for financial time series with values near zero
         smape = np.mean(200.0 * np.abs(y_pred_original - y_true_original) / (np.abs(y_pred_original) + np.abs(y_true_original) + 1e-8))
         mape = smape  # Using sMAPE instead of traditional MAPE
