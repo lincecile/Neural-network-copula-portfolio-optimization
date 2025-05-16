@@ -11,6 +11,7 @@ from forecasts.nn_model_dataclass import NnModel
 from clean_df_paper import df_training_set_daily, df_test_set_daily, df_out_sample_set_daily
 import os
 import pickle
+from forecasts.model_utils import save_model
 
 # %% RNN Forecaster Class
 class RNNForecaster(NnForecaster):
@@ -153,16 +154,18 @@ class RNNForecaster(NnForecaster):
             self.optimizer.step()
             
             # Store loss
-            losses.append(loss.item())
-            
-            # Print progress every 1000 iterations
+            losses.append(loss.item())            # Print progress every 1000 iterations
             if iteration % 1000 == 0:
                 print(f"Iteration {iteration}/{self.iteration_steps}, Loss: {loss.item():.6f}")
         
         print(f"Training completed. Final loss: {losses[-1]:.6f}")
+        
+        # Save the trained model
+        save_model(self)
+        
         return losses
         
-    def evaluate_model(self):
+    def evaluate_model(self) -> tuple:
         """
         Evaluate the model on the test set.
         

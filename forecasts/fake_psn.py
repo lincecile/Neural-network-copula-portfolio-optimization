@@ -4,11 +4,13 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
+import os
+import pickle
 
 from .forecaster import NnForecaster
 from .nn_model_dataclass import NnModel
 import pandas as pd
+from .model_utils import save_model
 
 #%% class
 
@@ -125,12 +127,15 @@ class FakePsnForecaster(NnForecaster):
             
             # Store loss
             losses.append(loss.item())
-            
-            # Print progress every 1000 iterations
+              # Print progress every 1000 iterations
             if iteration % 1000 == 0:
                 print(f"Iteration {iteration}/{self.iteration_steps}, Loss: {loss.item():.6f}")
         
         print(f"Training completed. Final loss: {losses[-1]:.6f}")
+        
+        # Save the trained model
+        save_model(self)
+        
         return losses
         
     def evaluate_model(self):

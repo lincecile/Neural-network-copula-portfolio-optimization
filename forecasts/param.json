@@ -23,8 +23,8 @@
     },
     "PSN": {
       "Learning algorithm": "Gradient descent",
-      "Learning rate": 0.4,
-      "Momentum": 0.5,
+      "Learning rate": 0.004,
+      "Momentum": 0.005,
       "Iteration steps": 40000,
       "Initialisation of weights": "N(0,1)",
       "Input nodes": 9,
@@ -58,8 +58,8 @@
     },
     "PSN": {
       "Learning algorithm": "Gradient descent",
-      "Learning rate": 0.3,
-      "Momentum": 0.5,
+      "Learning rate": 0.003,
+      "Momentum": 0.004,
       "Iteration steps": 40000,
       "Initialisation of weights": "N(0,1)",
       "Input nodes": 7,
@@ -93,8 +93,8 @@
     },
     "PSN": {
       "Learning algorithm": "Gradient descent",
-      "Learning rate": 0.3,
-      "Momentum": 0.4,
+      "Learning rate": 0.003,
+      "Momentum": 0.004,
       "Iteration steps": 25000,
       "Initialisation of weights": "N(0,1)",
       "Input nodes": 9,

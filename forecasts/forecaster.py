@@ -8,6 +8,8 @@ from sklearn.preprocessing import StandardScaler
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import os
+import pickle
 
 from ticker_dataclass import Ticker
 
@@ -196,13 +198,12 @@ class NnForecaster(ABC, torch.nn.Module):
             optimizer.step()
             
             # Store loss
-            losses.append(loss.item())
-            
-            # Print progress every 1000 iterations
+            losses.append(loss.item())            # Print progress every 1000 iterations
             if iteration % 1000 == 0:
                 print(f"Iteration {iteration}/{self.iteration_steps}, Loss: {loss.item():.6f}")
         
         print(f"Training completed. Final loss: {losses[-1]:.6f}")
+        
         return losses
     
     @abstractmethod
@@ -235,9 +236,18 @@ class NnForecaster(ABC, torch.nn.Module):
         # Get predictions
         with torch.no_grad():
             y_pred = self(x)
-        
-        # Inverse transform predictions to original scale
+          # Inverse transform predictions to original scale
         y_pred_np = y_pred.numpy()
         y_pred_original = self.y_scaler.inverse_transform(y_pred_np)
         
         return y_pred_original
+        if not os.path.exists(filename):
+            raise FileNotFoundError(f"Model file not found: {filename}")
+            
+        # Load the model dictionary
+        with open(filename, 'rb') as f:
+            model_dict = pickle.load(f)
+            
+        print(f"Model loaded from {filename} (trained on {model_dict['train_timestamp']})")
+        
+        return model_dict['model']

@@ -6,10 +6,13 @@ import torch.optim as optim
 import pandas as pd
 import numpy as np
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+import os
+import pickle
 
 from forecasts.forecaster import NnForecaster
 from forecasts.nn_model_dataclass import NnModel
 from ticker_dataclass import Ticker
+from forecasts.model_utils import save_model
 
 
 class MlpForecaster(NnForecaster):
@@ -108,6 +111,10 @@ class MlpForecaster(NnForecaster):
                 print(f"Iteration {iteration}/{self.iteration_steps}, Loss: {loss.item():.6f}")
         
         print(f"Training completed. Final loss: {losses[-1]:.6f}")
+        
+        # Save the trained model
+        save_model(self)
+        
         return losses
 
     def evaluate_model(self):
