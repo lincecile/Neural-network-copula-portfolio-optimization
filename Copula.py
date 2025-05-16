@@ -203,6 +203,9 @@ class SkewedTCopulaModel:
                 'gamma': {ticker: gamma for ticker, gamma in zip(tickers, params[1:])}
             }
             print(f"Paramètres estimés pour {date}: df={params[0]}, gamma={params[1:]}")
+            # self.copula_params = {ts: valeurs for ts, valeurs in self.copula_params.items() if ts in df_out_sample_set_weekly.index}
+            # print(self.copula_params)
+
 
     def export_results(self, base_filename='skewed_t_copula_results'):
         """Exporter les résultats"""
@@ -247,8 +250,8 @@ class SkewedTCopulaModel:
         if date not in self.weekly_matrices:
             raise ValueError(f"Pas de matrice DCC disponible pour {date}")
         
-
-        np.random.seed(100)
+        
+        # np.random.seed(100)
 
         params = self.copula_params[date]
         R = self.weekly_matrices[date].values
@@ -277,6 +280,8 @@ class SkewedTCopulaModel:
         # Calculer les statistiques des rendements historiques
         historical_mean = weekly_returns.mean()
         historical_std = weekly_returns.std()
+    
+        # print('aaaaaaaaaaaaaaaaaaaa',historical_mean,historical_std)
         
         # Standardiser les rendements simulés
         standardized_data = pd.DataFrame(index=simulated_data.index, columns=simulated_data.columns)
@@ -284,10 +289,17 @@ class SkewedTCopulaModel:
         for ticker in simulated_data.columns:
             # Standardiser les données simulées pour qu'elles aient la même moyenne et écart-type
             # que les données historiques (conversion en pourcentage)
-            standardized_data[ticker] = simulated_data[ticker] * historical_std[ticker] + historical_mean[ticker]
-        
+
+            # print('aaaaaaaaaaaaaaaaaaaa',ticker)
+            standardized_data[ticker] = simulated_data[ticker] * historical_std[ticker + ' US Equity'] + historical_mean[ticker + ' US Equity']
+        #     print(ticker, standardized_data[ticker])
+        # print("\n=== Simulation de la copule t asymétrique ===")
+        # print(simulated_data)
         # standardized_data * 100  # Convertir en pourcentage
         simulated_data = standardized_data.copy()
+
+
+        
         
         return simulated_data
     
@@ -304,6 +316,7 @@ class SkewedTCopulaModel:
             return
         
         params = self.copula_params[date]
+        print(self.copula_params)
         tickers = list(params['gamma'].keys())
         
         # Récupérer les paramètres
@@ -321,7 +334,7 @@ class SkewedTCopulaModel:
         print("\nMatrice de corrélation DCC:")
         pd.set_option('display.precision', 4)
         corr_df = pd.DataFrame(R, index=tickers, columns=tickers)
-        print(corr_df)
+        # print(corr_df)
         
         # Simuler des données
         n_samples = 10000
@@ -359,7 +372,7 @@ class SkewedTCopulaModel:
                     window_start = date - timedelta(weeks=26)
                     window_end = date + timedelta(weeks=26)
                     window_returns = weekly_returns.loc[window_start:window_end]
-                    print(window_returns)
+                    # print(window_returns)
                     
                     ax.scatter(
                         window_returns[viz_tickers[i]], 
@@ -406,17 +419,17 @@ class SkewedTCopulaModel:
         stats_df = simulated_data.describe().T
         stats_df['skew'] = simulated_data.skew()
         stats_df['kurtosis'] = simulated_data.kurtosis()
-        print(stats_df)
+        # print(stats_df)
         
         # Afficher la matrice de corrélation des données simulées
         print("\nMatrice de corrélation des rendements simulés:")
         sim_corr = simulated_data.corr()
-        print(sim_corr)
+        # print(sim_corr)
         
         # Comparer avec la matrice de corrélation DCC
         print("\nDifférence entre la corrélation simulée et la matrice DCC:")
         diff = sim_corr - corr_df
-        print(diff)
+        # print(diff)
 
 def main():
     # Créer l'instance unique
@@ -438,7 +451,7 @@ def main():
     
     # Créer et exécuter la copule
     skewed_t_copula = SkewedTCopulaModel('dcc_correlation_results_all_weekly.pkl')
-    skewed_t_copula.run_full_pipeline(df_out_sample_set_weekly)
+    skewed_t_copula.run_full_pipeline(df_test_set_weekly +df_out_sample_set_weekly)
     
     # Visualiser la copule pour une date spécifique
     # Utiliser la première date disponible après l'estimation des paramètres

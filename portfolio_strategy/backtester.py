@@ -24,9 +24,11 @@ def run_backtest(weekly_returns, copula_model, start_date=None, end_date=None, a
             continue
 
         try:
+            # print("avfjnkkvjdnsklhnfvisdlhngvifdhn")
             scenarios = generate_return_scenarios(copula_model, date, n_samples=1000)
+            # print('OKKKKKKKKKKKKKKKKKKKKKKK')
             weights = solve_cvar_lp(scenarios, alpha=alpha, allow_short=allow_short)
-
+            # print('aaaaaaaaaaaaaaaaaaaa')
             returns_at_date = weekly_returns.loc[date].values
             realized_return = returns_at_date @ weights
 
