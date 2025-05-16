@@ -230,7 +230,7 @@ class SkewedTCopulaModel:
         print("\n=== Pipeline de la copule t asymétrique complète ===")
         print(f"Paramètres estimés pour {len(self.copula_params)} semaines")
     
-    def simulate_skewed_t_copula(self, date, n_samples=1000):
+    def simulate_skewed_t_copula(self, date, n_samples=1000, weekly_returns=None):
         """
         Simuler des échantillons à partir de la copule t asymétrique
         
@@ -247,6 +247,9 @@ class SkewedTCopulaModel:
         if date not in self.weekly_matrices:
             raise ValueError(f"Pas de matrice DCC disponible pour {date}")
         
+
+        np.random.seed(100)
+
         params = self.copula_params[date]
         R = self.weekly_matrices[date].values
         df = params['df']
@@ -268,8 +271,25 @@ class SkewedTCopulaModel:
         Y = np.zeros_like(U)
         for j in range(n_dim):
             Y[:, j] = SkewedTCopulaModel.skewed_t_ppf(U[:, j], df, gamma_vec[j])
+
+        simulated_data = pd.DataFrame(Y, columns=tickers)
+
+        # Calculer les statistiques des rendements historiques
+        historical_mean = weekly_returns.mean()
+        historical_std = weekly_returns.std()
         
-        return pd.DataFrame(Y, columns=tickers)
+        # Standardiser les rendements simulés
+        standardized_data = pd.DataFrame(index=simulated_data.index, columns=simulated_data.columns)
+        
+        for ticker in simulated_data.columns:
+            # Standardiser les données simulées pour qu'elles aient la même moyenne et écart-type
+            # que les données historiques (conversion en pourcentage)
+            standardized_data[ticker] = simulated_data[ticker] * historical_std[ticker] + historical_mean[ticker]
+        
+        # standardized_data * 100  # Convertir en pourcentage
+        simulated_data = standardized_data.copy()
+        
+        return simulated_data
     
     def visualize_copula(self, date, weekly_returns=None):
         """
@@ -304,9 +324,9 @@ class SkewedTCopulaModel:
         print(corr_df)
         
         # Simuler des données
-        n_samples = 2000
-        simulated_data = self.simulate_skewed_t_copula(date, n_samples=n_samples)
-        
+        n_samples = 10000
+        simulated_data = self.simulate_skewed_t_copula(date, n_samples=n_samples, weekly_returns=weekly_returns)
+
         # Créer la figure
         fig = plt.figure(figsize=(15, 10))
         
@@ -339,6 +359,7 @@ class SkewedTCopulaModel:
                     window_start = date - timedelta(weeks=26)
                     window_end = date + timedelta(weeks=26)
                     window_returns = weekly_returns.loc[window_start:window_end]
+                    print(window_returns)
                     
                     ax.scatter(
                         window_returns[viz_tickers[i]], 
@@ -351,6 +372,19 @@ class SkewedTCopulaModel:
                 
                 ax.set_xlabel(viz_tickers[i])
                 ax.set_ylabel(viz_tickers[j])
+
+                # Ajouter la droite x = y
+                # Déterminer les limites min et max pour les deux axes
+                x_data = simulated_data[viz_tickers[i]].tolist() + window_returns[viz_tickers[i]].tolist()
+                y_data = simulated_data[viz_tickers[j]].tolist() + window_returns[viz_tickers[j]].tolist()
+                min_val = min(x_data)
+                max_val = max(x_data)
+                # Tracer la droite x = y avec une petite marge
+                margin = (max_val - min_val) * 0.05
+                ax.plot([min_val - margin, max_val + margin], 
+                        [min_val - margin, max_val + margin],
+                        'g--', alpha=0.6, label='x = y' if i == 0 and j == 1 else "")
+            
                 
                 if i == 0 and j == 1:
                     ax.legend()
@@ -409,9 +443,11 @@ def main():
     # Visualiser la copule pour une date spécifique
     # Utiliser la première date disponible après l'estimation des paramètres
     if len(skewed_t_copula.copula_params) > 0:
-        selected_date = list(skewed_t_copula.copula_params.keys())[0]
-        print(f"\n=== Visualisation de la copule pour {selected_date} ===")
-        skewed_t_copula.visualize_copula(selected_date, df_out_sample_set_weekly)
+        for i in range(len(skewed_t_copula.copula_params)):
+
+            selected_date = list(skewed_t_copula.copula_params.keys())[i]
+            print(f"\n=== Visualisation de la copule pour {selected_date} ===")
+            skewed_t_copula.visualize_copula(selected_date, df_out_sample_set_weekly)
     else:
         print("Aucune date disponible pour visualiser la copule")
 
