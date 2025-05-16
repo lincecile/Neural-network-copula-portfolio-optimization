@@ -9,7 +9,7 @@ warnings.filterwarnings("ignore")
 import matplotlib.pyplot as plt
 
 
-from Matrice_VC.DCC import DCC_Portfolio_Correlation
+from Matrice.DCC import DCC_Portfolio
 from clean_df_paper import df_total_set_daily, df_in_sample_set_daily, df_out_sample_set_daily
 from clean_df_paper import df_training_set_weekly, df_test_set_weekly, df_out_sample_set_weekly
 
@@ -386,7 +386,7 @@ class SkewedTCopulaModel:
 
 def main():
     # Créer l'instance unique
-    dcc_portfolio = DCC_Portfolio_Correlation(
+    dcc_portfolio = DCC_Portfolio(
         all_data=df_total_set_daily,
         in_sample_data=df_in_sample_set_daily,
         out_sample_data=df_out_sample_set_daily,
