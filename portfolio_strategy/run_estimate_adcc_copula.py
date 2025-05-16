@@ -1,0 +1,29 @@
+import os
+# Set working directory to the root of your project (adjust path if needed)
+os.chdir(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import pickle
+from Copula import SkewedTCopulaModel
+from clean_df_paper import df_out_sample_set_weekly
+
+# Load ADCC matrices
+with open("adcc_results_all_weekly.pkl", "rb") as f:
+    adcc_data = pickle.load(f)
+
+# Initialize copula model
+copula = SkewedTCopulaModel.__new__(SkewedTCopulaModel)
+copula.weekly_matrices = adcc_data["matrices"]
+copula.weekly_dates = adcc_data["weekly_dates"]
+copula.copula_params = {}  # <- ✅ fix: manual initialization
+
+# Estimate copula parameters
+copula.estimate_weekly_copula_parameters(df_out_sample_set_weekly, window_size=26)
+print("Earliest copula param:", min(copula.copula_params.keys()))
+print("Latest copula param:", max(copula.copula_params.keys()))
+
+
+# Export results
+with open("copula_params_adcc.pkl", "wb") as f:
+    pickle.dump(copula.copula_params, f)
+
+print("\n✅ Copula parameters saved to: copula_params_adcc.pkl")
