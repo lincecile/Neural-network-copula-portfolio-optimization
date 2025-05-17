@@ -126,17 +126,17 @@ print("Dtype:", perf_series.dtype)
 
 # === Save & plot
 if isinstance(perf_series, pd.Series) and not perf_series.empty and pd.api.types.is_numeric_dtype(perf_series):
-    perf_series.cumsum().plot(
-        title="Panel B: rnn-ADCC-Skewed t Copula (Long Only)",
-        figsize=(10, 5)
-    )
-    plt.ylabel("Cumulative Return")
-    plt.xlabel("Date")
-    plt.tight_layout()
-    plt.savefig("rnn_adcc_skt_cumulative_return.png")
-    plt.show()
+    # perf_series.cumsum().plot(
+    #     title="Panel B: rnn-ADCC-Skewed t Copula (Long Only)",
+    #     figsize=(10, 5)
+    # )
+    # plt.ylabel("Cumulative Return")
+    # plt.xlabel("Date")
+    # plt.tight_layout()
+    # plt.savefig("rnn_adcc_skt_cumulative_return.png")
+    # plt.show()
 
-    perf_series.to_csv("rnn_adcc_skt_returns.csv")
+    # perf_series.to_csv("rnn_adcc_skt_returns.csv")
 
     # Extra stats
     realized_return = perf_series.sum() * 100
