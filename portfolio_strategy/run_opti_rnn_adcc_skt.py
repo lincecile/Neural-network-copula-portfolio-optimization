@@ -1,4 +1,4 @@
-# run_opti_arma_adcc_skt.py
+# run_opti_rnn_adcc_skt.py
 
 import os
 import sys
@@ -26,14 +26,13 @@ import numpy as np
 with open("adcc_results_all_weekly.pkl", "rb") as f:
     adcc_data = pickle.load(f)
 
-# === Load ARMA forecasts ===
-with open("arma_results.pkl", "rb") as f:
-    arma_forecasts = pickle.load(f)
+# === Load rnn forecasts ===
+with open("rnn_results.pkl", "rb") as f:
+    rnn_forecasts = pickle.load(f)
 
-
-# === Convert ARMA forecasts to weekly returns ===
+# === Convert rnn forecasts to weekly returns ===
 returns_dict = {}
-for ticker, content in arma_forecasts.items():
+for ticker, content in rnn_forecasts.items():
     pred = content['predictions']
     full_idx = df_out_sample_set_daily[ticker].index[-len(pred):]
     daily_series = pd.Series(pred, index=pd.to_datetime(full_idx)).sort_index()
@@ -44,7 +43,7 @@ for ticker, content in arma_forecasts.items():
     clean_name = ticker.replace(" US Equity", "")
     returns_dict[clean_name] = weekly_series
 
-    print(f"\n{ticker} — ARMA daily: {daily_series.index.min()} to {daily_series.index.max()}")
+    print(f"\n{ticker} — rnn daily: {daily_series.index.min()} to {daily_series.index.max()}")
     print(f"{ticker} — Resampled weekly: {weekly_series.index.min()} to {weekly_series.index.max()}")
     print(f"{ticker} — Matching weekly dates count: {len(weekly_series)}")
 
@@ -109,7 +108,7 @@ print(copula.weekly_dates[:5])
 print(f"Total synced dates: {len(copula.weekly_dates)}")
 
 # === Run backtest
-print("\n=== Running Panel B strategy: ARMA-ADCC-Skewed t Copula (Long Only) ===")
+print("\n=== Running Panel B strategy: rnn-ADCC-Skewed t Copula (Long Only) ===")
 perf_series = run_backtest(
     weekly_returns=forecast_df,
     copula_model=copula,
@@ -128,16 +127,16 @@ print("Dtype:", perf_series.dtype)
 # === Save & plot
 if isinstance(perf_series, pd.Series) and not perf_series.empty and pd.api.types.is_numeric_dtype(perf_series):
     perf_series.cumsum().plot(
-        title="Panel B: ARMA-ADCC-Skewed t Copula (Long Only)",
+        title="Panel B: rnn-ADCC-Skewed t Copula (Long Only)",
         figsize=(10, 5)
     )
     plt.ylabel("Cumulative Return")
     plt.xlabel("Date")
     plt.tight_layout()
-    plt.savefig("arma_adcc_skt_cumulative_return.png")
+    plt.savefig("rnn_adcc_skt_cumulative_return.png")
     plt.show()
 
-    perf_series.to_csv("arma_adcc_skt_returns.csv")
+    perf_series.to_csv("rnn_adcc_skt_returns.csv")
 
     # Extra stats
     realized_return = perf_series.sum() * 100
@@ -147,7 +146,7 @@ if isinstance(perf_series, pd.Series) and not perf_series.empty and pd.api.types
     cvar_ratio = perf_series.mean() / abs(cvar) if cvar else float('inf')
     mdd = (perf_series.cumsum().cummax() - perf_series.cumsum()).max()
 
-    print("\n=== Panel B: ARMA-ADCC-SKT Performance ===")
+    print("\n=== Panel B: rnn-ADCC-SKT Performance ===")
     print(f"Realized return (%):     {realized_return:.3f}")
     print(f"Return / CVaR:           {cvar_ratio:.4f}")
     print(f"Sortino ratio:           {sortino:.4f}")
@@ -164,7 +163,7 @@ else:
     cvar_ratio = perf_series.mean() / abs(cvar) if cvar != 0 else float('inf')
     mdd = (perf_series.cumsum().cummax() - perf_series.cumsum()).max()
 
-    print("\n=== Panel B: ARMA-DCC-SKT Performance ===")
+    print("\n=== Panel B: rnn-DCC-SKT Performance ===")
     print(f"Realized return (%):     {realized_return:.3f}")
     print(f"Return / CVaR:           {cvar_ratio:.4f}")
     print(f"Sortino ratio:           {sortino:.4f}")

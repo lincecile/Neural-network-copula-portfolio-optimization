@@ -1,4 +1,4 @@
-# run_opti_arma_adcc_skt.py
+# run_opti_arma_gas_skt.py
 
 import os
 import sys
@@ -23,13 +23,12 @@ from clean_df_paper import df_out_sample_set_weekly, df_out_sample_set_daily
 from pandas import Timestamp
 import numpy as np
 # === Load ADCC matrices ===
-with open("adcc_results_all_weekly.pkl", "rb") as f:
-    adcc_data = pickle.load(f)
+with open("gas_results_all_weekly.pkl", "rb") as f:
+    gas_data = pickle.load(f)
 
 # === Load ARMA forecasts ===
 with open("arma_results.pkl", "rb") as f:
     arma_forecasts = pickle.load(f)
-
 
 # === Convert ARMA forecasts to weekly returns ===
 returns_dict = {}
@@ -53,15 +52,15 @@ forecast_df = pd.DataFrame(returns_dict)
 print("\n=== Forecast Weekly Returns Index Preview ===")
 print(forecast_df.index[:5])
 print("=== ADCC Weekly Dates Preview ===")
-print(adcc_data["weekly_dates"][:5])
+print(gas_data["weekly_dates"][:5])
 
 # === Load Copula (without calling __init__)
 copula = SkewedTCopulaModel.__new__(SkewedTCopulaModel)
-copula.weekly_matrices = adcc_data['matrices']
-copula.weekly_dates = adcc_data['weekly_dates']
+copula.weekly_matrices = gas_data['matrices']
+copula.weekly_dates = gas_data['weekly_dates']
 
 # === Load estimated copula parameters
-with open("copula_params_adcc.pkl", "rb") as f:
+with open("copula_params_gas.pkl", "rb") as f:
     copula_data = pickle.load(f)
     copula.copula_params = copula_data["copula_params"]
 
@@ -134,10 +133,10 @@ if isinstance(perf_series, pd.Series) and not perf_series.empty and pd.api.types
     plt.ylabel("Cumulative Return")
     plt.xlabel("Date")
     plt.tight_layout()
-    plt.savefig("arma_adcc_skt_cumulative_return.png")
+    plt.savefig("arma_gas_skt_cumulative_return.png")
     plt.show()
 
-    perf_series.to_csv("arma_adcc_skt_returns.csv")
+    perf_series.to_csv("arma_gas_skt_returns.csv")
 
     # Extra stats
     realized_return = perf_series.sum() * 100

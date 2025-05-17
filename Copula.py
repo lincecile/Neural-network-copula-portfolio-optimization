@@ -291,7 +291,11 @@ class SkewedTCopulaModel:
             # que les données historiques (conversion en pourcentage)
 
             # print('aaaaaaaaaaaaaaaaaaaa',ticker)
-            standardized_data[ticker] = simulated_data[ticker] * historical_std[ticker + ' US Equity'] + historical_mean[ticker + ' US Equity']
+            try:
+                standardized_data[ticker] = simulated_data[ticker] * historical_std[ticker + ' US Equity'] + historical_mean[ticker + ' US Equity']
+            except KeyError:
+                standardized_data[ticker] = simulated_data[ticker] * historical_std[ticker] + historical_mean[ticker]
+
         #     print(ticker, standardized_data[ticker])
         # print("\n=== Simulation de la copule t asymétrique ===")
         # print(simulated_data)
