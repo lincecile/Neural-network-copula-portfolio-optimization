@@ -12,7 +12,7 @@ warnings.filterwarnings("ignore")
 
 # Import data
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from clean_df_paper import df_test_set_daily, df_training_set_daily, df_out_sample_set_daily
+from clean_df_all import df_test_set_daily, df_training_set_daily, df_out_sample_set_daily
 
 class ARMAForecastModel:
     def __init__(self):

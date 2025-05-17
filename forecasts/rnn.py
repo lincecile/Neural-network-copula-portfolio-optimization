@@ -8,7 +8,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error
 from forecasts.forecaster import NnForecaster
 from ticker_dataclass import Ticker
 from forecasts.nn_model_dataclass import NnModel
-from clean_df_paper import df_training_set_daily, df_test_set_daily, df_out_sample_set_daily
+from clean_df_all import df_training_set_daily, df_test_set_daily, df_out_sample_set_daily
 import os
 import pickle
 from forecasts.model_utils import save_model

@@ -4,7 +4,7 @@ os.chdir(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pickle
 from Copula import SkewedTCopulaModel
-from clean_df_paper import df_out_sample_set_weekly, df_test_set_weekly
+from clean_df_all import df_out_sample_set_weekly, df_test_set_weekly
 
 # Load DCC matrices
 with open("dcc_results_all_weekly.pkl", "rb") as f:

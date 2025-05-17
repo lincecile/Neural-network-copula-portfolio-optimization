@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 
 
 from Matrice.DCC import DCC_Portfolio
-from clean_df_paper import df_total_set_daily, df_in_sample_set_daily, df_out_sample_set_daily
-from clean_df_paper import df_training_set_weekly, df_test_set_weekly, df_out_sample_set_weekly
+from clean_df_all import df_total_set_daily, df_in_sample_set_daily, df_out_sample_set_daily
+from clean_df_all import df_training_set_weekly, df_test_set_weekly, df_out_sample_set_weekly
 
 class SkewedTCopulaModel:
     def __init__(self, correl_results_file):

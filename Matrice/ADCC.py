@@ -5,7 +5,7 @@ from scipy.optimize import minimize
 import warnings
 import pickle
 from datetime import timedelta
-from clean_df_paper import df_total_set_daily, df_out_sample_set_daily, df_in_sample_set_daily, df_out_sample_set_weekly
+from clean_df_all import df_total_set_daily, df_out_sample_set_daily, df_in_sample_set_daily, df_out_sample_set_weekly
 warnings.filterwarnings("ignore")
 
 class ADCC_Portfolio:

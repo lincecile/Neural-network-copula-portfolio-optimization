@@ -19,7 +19,7 @@ except ImportError:
 # === Imports
 from Copula import SkewedTCopulaModel
 from portfolio_strategy.backtester import run_backtest
-from clean_df_paper import df_out_sample_set_weekly, df_out_sample_set_daily
+from clean_df_all import df_out_sample_set_weekly, df_out_sample_set_daily
 from pandas import Timestamp
 import numpy as np
 # === Load dcc matrices ===
@@ -64,18 +64,6 @@ with open("copula_params_dcc.pkl", "rb") as f:
     copula_data = pickle.load(f)
     copula.copula_params = copula_data["copula_params"]
 
-print('==========================================')
-print(copula.copula_params)
-
-dummy_tickers = forecast_df.columns.tolist()
-
-copula.copula_params = {
-    date: {
-        'df': 5,
-        'gamma': {ticker: 1.0 for ticker in dummy_tickers}
-    }
-    for date in copula.weekly_dates
-}
 
 print(copula.copula_params)
 # === Determine first valid date for which we have copula params
